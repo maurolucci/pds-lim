@@ -8,10 +8,11 @@ namespace pds {
 
 inline const double TIME_LIMIT = 3600;
 
-MIPModel brimkovModel(Pds& input);
+MIPModel brimkovModel(Pds &input);
 
-SolveResult solveMIP(const Pds& input, MIPModel& model, bool output = false, double timeLimit = TIME_LIMIT);
+SolveResult solveMIP(const Pds &input, MIPModel &model, bool output = false,
+                     double timeLimit = TIME_LIMIT);
 
-} // end of namespace brimkov
+} // namespace pds
 
 #endif // GUROBI_SOLVE_HPP

@@ -5,7 +5,8 @@
 
 namespace pds {
 
-PowerGrid readGraphML(const std::string& filename, bool allZeroInjection = false);
+PowerGrid readGraphML(const std::string &filename,
+                      bool allZeroInjection = false);
 
 }
 
