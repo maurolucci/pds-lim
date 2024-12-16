@@ -17,6 +17,19 @@ struct Bus {
 
 using PowerGrid = boost::adjacency_list<boost::vecS, boost::vecS, boost::undirectedS, Bus>;
 
+enum class SolveState {
+    Optimal,
+    Timeout,
+    Infeasible,
+    Other
+};
+
+struct SolveResult {
+    size_t lower;
+    size_t upper;
+    SolveState state;
+};
+
 class Pds {
 private:
     PowerGrid graph;
