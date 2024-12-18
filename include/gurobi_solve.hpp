@@ -4,14 +4,14 @@
 #include "gurobi_common.hpp"
 #include "pds.hpp"
 
-namespace pds {
+#include <boost/optional.hpp>
 
-inline const double TIME_LIMIT = 3600;
+namespace pds {
 
 MIPModel brimkovModel(Pds &input);
 
-SolveResult solveMIP(const Pds &input, MIPModel &model, bool output = false,
-                     double timeLimit = TIME_LIMIT);
+SolveResult solveMIP(const Pds &input, MIPModel &model,
+                     boost::optional<std::string> output, double timeLimit);
 
 } // namespace pds
 

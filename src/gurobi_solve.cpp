@@ -12,11 +12,15 @@ GRBEnv &getEnv() {
 MIPModel::MIPModel() : model(std::make_unique<GRBModel>(getEnv())), s(), w() {}
 MIPModel::~MIPModel() {}
 
-SolveResult solveMIP(const Pds &state, MIPModel &mipmodel, bool output,
-                     double timeLimit) {
+SolveResult solveMIP(const Pds &state, MIPModel &mipmodel,
+                     boost::optional<std::string> outPath, double timeLimit) {
   auto &model = *mipmodel.model;
-  model.set(GRB_StringParam_LogFile, "gurobi.log");
-  model.set(GRB_IntParam_LogToConsole, int{output});
+  if (outPath.has_value()) {
+    model.set(GRB_StringParam_LogFile, outPath.get());
+    model.set(GRB_IntParam_LogToConsole, false);
+  } else {
+    model.set(GRB_IntParam_LogToConsole, true);
+  }
   model.set(GRB_DoubleParam_TimeLimit, timeLimit);
 
   model.optimize();
