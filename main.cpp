@@ -143,9 +143,8 @@ int main(int argc, const char **argv) {
     Pds input(readGraphML(filename, allZeroInjection), n_channels);
     for (size_t run = 0; run < repetitions; ++run) {
 
-      fs::path currentName;
-      currentName.replace_filename(fs::path(filename).stem().append(
-          fmt::format("-{}-{}-{}", solver, n_channels, run)));
+      fs::path currentName(fs::path(filename).stem().string() +
+                           fmt::format("-{}-{}-{}", solver, n_channels, run));
       std::cout << "Solving Instance: " << currentName << "..." << std::endl;
       if (vm.count("outdir")) {
         for (auto [key, _] : outDirs) {
