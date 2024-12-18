@@ -146,7 +146,7 @@ int main(int argc, const char **argv) {
     for (size_t run = 0; run < repetitions; ++run) {
 
       fs::path currentName = fs::path(filename).stem();
-      currentName += "-{}-{}-{}";
+      currentName += fmt::format("-{}-{}-{}", solver, n_channels, run);
       if (vm.count("outdir")) {
         for (auto [key, _] : outDirs) {
           outDirs[key] = boost::optional<std::string>(
