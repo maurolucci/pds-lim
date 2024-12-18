@@ -15,15 +15,16 @@ public:
       : reason(fmt::format("{}: {}", line, reason)) {}
   ParseError(const ParseError &) = default;
   ParseError(ParseError &&) = default;
-
   const char *what() const noexcept override { return reason.c_str(); }
 };
 
 namespace {
+
 struct GraphMLAttribute {
   std::string type;
   std::string name;
 };
+
 bool parseBool(const std::string &text) {
   std::string boolString = std::string(text);
   boost::algorithm::to_lower(boolString);
@@ -32,6 +33,7 @@ bool parseBool(const std::string &text) {
     return false;
   return true;
 }
+
 } // namespace
 
 PowerGrid readGraphML(const std::string &filename, bool all_zero_injection) {
@@ -86,7 +88,7 @@ PowerGrid readGraphML(const std::string &filename, bool all_zero_injection) {
   for (auto node = graph->FirstChildElement("node"); node != nullptr;
        node = node->NextSiblingElement("node")) {
     const char *key;
-    bool zero_injection;
+    bool zero_injection = all_zero_injection;
     if (node->QueryAttribute("id", &key))
       throw ParseError("invalid node", node->GetLineNum());
     std::string name(key), name_alt(key);

@@ -1,8 +1,10 @@
 #ifndef PDS_HPP
 #define PDS_HPP
 
+#include <boost/range/algorithm.hpp>
 #include <fmt/core.h>
 #include <fmt/ranges.h>
+#include <range/v3/all.hpp>
 
 #include "boost/graph/adjacency_list.hpp"
 #include "boost/graph/graph_traits.hpp"
@@ -37,13 +39,16 @@ public:
   explicit Pds(const PowerGrid &graph, size_t n_channels);
 
   [[nodiscard]] inline const PowerGrid &get_graph() const { return graph; }
-  [[nodiscard]] inline const size_t get_n_channels() const {
-    return n_channels;
-  }
+  [[nodiscard]] inline size_t get_n_channels() const { return n_channels; }
 
   [[nodiscard]] inline bool
   isZeroInjection(PowerGrid::vertex_descriptor v) const {
     return graph[v].zero_injection;
+  }
+
+  [[nodiscard]] inline std::ptrdiff_t numZeroInjection() const {
+    return boost::range::count_if(
+        vertices(get_graph()), [this](auto v) { return isZeroInjection(v); });
   }
 
 }; // end of class Pds
