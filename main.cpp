@@ -131,7 +131,7 @@ int main(int argc, const char **argv) {
       fs::create_directory(outDir);
     }
     for (auto [key, _] : outDirs) {
-      outDirs[key] = outDir / key;
+      outDirs[key] = outDir / key / "";
       if (!fs::is_directory(outDirs[key])) {
         fs::create_directories(outDirs[key]);
       }
@@ -143,12 +143,14 @@ int main(int argc, const char **argv) {
     Pds input(readGraphML(filename, allZeroInjection), n_channels);
     for (size_t run = 0; run < repetitions; ++run) {
 
-      fs::path currentName = fs::path(filename).stem();
-      currentName += fmt::format("-{}-{}-{}", solver, n_channels, run);
+      fs::path currentName;
+      currentName.replace_filename(fs::path(filename).stem().append(
+          fmt::format("-{}-{}-{}", solver, n_channels, run)));
       std::cout << "Solving Instance: " << currentName << "..." << std::endl;
       if (vm.count("outdir")) {
         for (auto [key, _] : outDirs) {
-          outDirs[key].replace_filename(currentName.append("." + key));
+          outDirs[key].replace_filename(currentName);
+          outDirs[key].replace_extension(key);
         }
 
         // Resume check
