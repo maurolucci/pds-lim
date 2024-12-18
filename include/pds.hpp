@@ -23,8 +23,12 @@ using PowerGrid =
 enum class SolveState { Optimal, Timeout, Infeasible, Other };
 
 struct SolveResult {
-  size_t lower;
-  size_t upper;
+  int variables;
+  int constraints;
+  double lower;
+  double upper;
+  double gap;
+  double nodes;
   SolveState state;
 };
 

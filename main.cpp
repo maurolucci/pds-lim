@@ -132,13 +132,17 @@ int main(int argc, const char **argv) {
       auto t1 = now();
 
       using namespace fmt::literals;
-      fmt::print("{solver},{name},{n},{m},{zi},{n_channels},{run},{lower_bound}"
-                 ",{upper_bound},{result},{t_solver}\n",
+      fmt::print("{solver},{name},{n},{m},{zi},{channels},{variables},{"
+                 "constraints},{run},{lower_bound},{upper_bound},{gap},{result}"
+                 ",{nodes},{t_solver}\n",
                  "solver"_a = solver, "name"_a = filename, "n"_a = n, "m"_a = m,
-                 "zi"_a = zi, "n_channels"_a = n_channels, "run"_a = run,
+                 "zi"_a = zi, "channels"_a = n_channels,
+                 "variables"_a = result.variables,
+                 "constraints"_a = result.constraints, "run"_a = run,
                  "lower_bound"_a = result.lower, "upper_bound"_a = result.upper,
+                 "gap"_a = result.gap,
                  "result"_a = format_solve_state(result.state),
-                 "t_solver"_a = µs(t1 - t0));
+                 "nodes"_a = result.nodes, "t_solver"_a = µs(t1 - t0));
     }
   }
 

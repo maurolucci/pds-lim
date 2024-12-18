@@ -23,15 +23,37 @@ SolveResult solveMIP(const Pds &state, MIPModel &mipmodel, bool output,
 
   switch (model.get(GRB_IntAttr_Status)) {
   case GRB_INFEASIBLE:
-    return {size_t{1}, size_t{0}, SolveState::Infeasible};
+    return {model.get(GRB_IntAttr_NumVars),
+            model.get(GRB_IntAttr_NumConstrs),
+            1.0,
+            0.0,
+            model.get(GRB_DoubleAttr_MIPGap),
+            model.get(GRB_DoubleAttr_NodeCount),
+            SolveState::Infeasible};
   case GRB_OPTIMAL:
-    return {size_t(model.get(GRB_DoubleAttr_ObjBound)),
-            size_t(model.get(GRB_DoubleAttr_ObjVal)), SolveState::Optimal};
+    return {model.get(GRB_IntAttr_NumVars),
+            model.get(GRB_IntAttr_NumConstrs),
+            model.get(GRB_DoubleAttr_ObjBound),
+            model.get(GRB_DoubleAttr_ObjVal),
+            model.get(GRB_DoubleAttr_MIPGap),
+            model.get(GRB_DoubleAttr_NodeCount),
+            SolveState::Optimal};
   case GRB_TIME_LIMIT:
-    return {size_t(model.get(GRB_DoubleAttr_ObjBound)),
-            size_t(model.get(GRB_DoubleAttr_ObjVal)), SolveState::Timeout};
+    return {model.get(GRB_IntAttr_NumVars),
+            model.get(GRB_IntAttr_NumConstrs),
+            model.get(GRB_DoubleAttr_ObjBound),
+            model.get(GRB_DoubleAttr_ObjVal),
+            model.get(GRB_DoubleAttr_MIPGap),
+            model.get(GRB_DoubleAttr_NodeCount),
+            SolveState::Timeout};
   default:
-    return {size_t{1}, size_t{0}, SolveState::Other};
+    return {model.get(GRB_IntAttr_NumVars),
+            model.get(GRB_IntAttr_NumConstrs),
+            1.0,
+            0.0,
+            model.get(GRB_DoubleAttr_MIPGap),
+            model.get(GRB_DoubleAttr_NodeCount),
+            SolveState::Other};
   }
 }
 
