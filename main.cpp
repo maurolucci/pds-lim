@@ -19,10 +19,8 @@ using namespace pds;
 using Solver =
     std::function<SolveResult(Pds &, double, boost::optional<std::string>)>;
 
-std::map<std::string, boost::optional<std::string>> outDirs = {
-    {"log", boost::optional<std::string>{}},
-    {"stat", boost::optional<std::string>{}},
-    {"sol", boost::optional<std::string>{}}};
+std::map<std::string, fs::path> outDirs = {
+    {"log", fs::path()}, {"stat", fs::path()}, {"sol", fs::path()}};
 
 std::string format_solve_state(SolveState state) {
   std::string name = "unknown";
@@ -125,17 +123,17 @@ int main(int argc, const char **argv) {
     fmt::print(stderr, "no input\n");
     return 2;
   }
-  std::string outDir;
+  fs::path outDir;
   if (vm.count("outdir")) {
-    outDir = vm["outdir"].as<std::string>();
+    outDir = fs::path(vm["outdir"].as<std::string>());
     // Create output directories
     if (!fs::is_directory(outDir)) {
       fs::create_directory(outDir);
     }
     for (auto [key, _] : outDirs) {
-      outDirs[key] = boost::optional<std::string>(outDir + "/" + key);
-      if (!fs::is_directory(outDirs[key].get())) {
-        fs::create_directories(outDirs[key].get());
+      outDirs[key] = outDir / key;
+      if (!fs::is_directory(outDirs[key])) {
+        fs::create_directories(outDirs[key]);
       }
     }
   }
@@ -150,14 +148,13 @@ int main(int argc, const char **argv) {
       std::cout << "Solving Instance: " << currentName << "..." << std::endl;
       if (vm.count("outdir")) {
         for (auto [key, _] : outDirs) {
-          outDirs[key] = boost::optional<std::string>(
-              outDirs[key].get() + "/" + currentName.string() + "." + key);
+          outDirs[key].replace_filename(currentName.append("." + key));
         }
 
         // Resume check
-        if (fs::is_regular_file(outDirs["stat"].get())) {
+        if (fs::is_regular_file(outDirs["stat"])) {
           std::ifstream stats;
-          stats.open(outDirs["stat"].get());
+          stats.open(outDirs["stat"]);
           std::string line;
           while (getline(stats, line)) {
             std::cout << line << std::endl;
@@ -176,7 +173,11 @@ int main(int argc, const char **argv) {
       Solver solve = getSolver(vm);
       SolveResult result;
       try {
-        result = solve(input, timeout, outDirs["log"]);
+        result =
+            solve(input, timeout,
+                  vm.count("outdir")
+                      ? boost::optional<std::string>(outDirs["log"].string())
+                      : boost::none);
       } catch (GRBException ex) {
         fmt::print(stderr, "Gurobi Exception {}: {}\n", ex.getErrorCode(),
                    ex.getMessage());
@@ -198,7 +199,7 @@ int main(int argc, const char **argv) {
           "gap"_a = result.gap, "result"_a = format_solve_state(result.state),
           "nodes"_a = result.nodes, "t_solver"_a = µs(t1 - t0)));
       if (vm.count("outdir")) {
-        std::ofstream statFile(outDirs["stat"].get(), std::ofstream::out);
+        std::ofstream statFile(outDirs["stat"], std::ofstream::out);
         statFile << stats;
         statFile.close();
       }
