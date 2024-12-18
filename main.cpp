@@ -152,9 +152,19 @@ int main(int argc, const char **argv) {
           outDirs[key] = boost::optional<std::string>(
               outDirs[key].get() + "/" + currentName.string() + "." + key);
         }
-        // Resume check
-        if (fs::is_regular_file(outDirs["stat"].get()))
-          continue;
+      }
+
+      // Resume check
+      std::cout << "Solving Instance: " << currentName << "..." << std::endl;
+      if (fs::is_regular_file(outDirs["stat"].get())) {
+        std::cout << "Solving Instance: " << currentName << "..." << std::endl;
+        std::ifstream stats;
+        stats.open(outDirs["stat"].get());
+        std::string line;
+        while (getline(stats, line)) {
+          std::cout << line << std::endl;
+        }
+        continue;
       }
 
       auto &graph = static_cast<const Pds &>(input).get_graph();
@@ -192,8 +202,8 @@ int main(int argc, const char **argv) {
         std::ofstream statFile(outDirs["stat"].get(), std::ofstream::out);
         statFile << stats;
         statFile.close();
-      } else
-        std::cout << stats;
+      }
+      std::cout << stats;
     }
   }
 

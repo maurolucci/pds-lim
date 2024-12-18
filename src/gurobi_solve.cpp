@@ -16,8 +16,8 @@ SolveResult solveMIP(const Pds &state, MIPModel &mipmodel,
                      boost::optional<std::string> outPath, double timeLimit) {
   auto &model = *mipmodel.model;
   if (outPath.has_value()) {
-    model.set(GRB_StringParam_LogFile, outPath.get());
     model.set(GRB_IntParam_LogToConsole, false);
+    model.set(GRB_StringParam_LogFile, outPath.get());
   } else {
     model.set(GRB_IntParam_LogToConsole, true);
   }
