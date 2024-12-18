@@ -149,9 +149,8 @@ int main(int argc, const char **argv) {
       currentName += "-{}-{}-{}";
       if (vm.count("outdir")) {
         for (auto [key, _] : outDirs) {
-          outDirs[key].map([key, currentName](std::string s) {
-            return s + "/" + currentName.string() + "." + key;
-          });
+          outDirs[key] = boost::optional<std::string>(
+              outDirs[key].get() + "/" + currentName.string() + "." + key);
         }
         // Resume check
         if (fs::is_regular_file(outDirs["stat"].get()))
