@@ -106,14 +106,14 @@ MIPModel brimkovModel(Pds &input) {
     }
 
     // (3) sum_{u \in N(v)} w_v_u <= (omega_v - 1) s_v, \forall v \in V
-    if (boost::degree(v, graph) > n_channels - 1) {
-      GRBLinExpr constr3 = 0;
-      for (auto u :
-           boost::make_iterator_range(boost::adjacent_vertices(v, graph))) {
-        constr3 += w.at(std::make_pair(v, u));
-      }
-      model.addConstr(constr3 <= (n_channels - 1) * s.at(v));
+    GRBLinExpr constr3 = 0;
+    for (auto u :
+         boost::make_iterator_range(boost::adjacent_vertices(v, graph))) {
+      constr3 += w.at(std::make_pair(v, u));
     }
+    model.addConstr(constr3 <=
+                    std::min(boost::degree(v, graph), (n_channels - 1)) *
+                        s.at(v));
   }
 
   return mipmodel;
