@@ -1,3 +1,4 @@
+#include "cycle_solve.hpp"
 #include "graphio.hpp"
 #include "gurobi_solve.hpp"
 #include "pds.hpp"
@@ -17,7 +18,7 @@ namespace fs = std::filesystem;
 namespace po = boost::program_options;
 using namespace pds;
 using Solver =
-    std::function<SolveResult(Pds &, double, boost::optional<std::string>)>;
+    std::function<SolveResult(Pds &, boost::optional<std::string>, double)>;
 
 std::map<std::string, fs::path> outDirs = {
     {"log", fs::path()}, {"stat", fs::path()}, {"sol", fs::path()}};
@@ -59,8 +60,8 @@ auto getSolver(po::variables_map &vm) {
   std::string solverName = vm["solver"].as<std::string>();
   try {
     return Solver{
-        [model = getModel(solverName)](auto &input, double timeout,
-                                       boost::optional<std::string> outPath) {
+        [model = getModel(solverName)](
+            auto &input, boost::optional<std::string> outPath, double timeout) {
           auto mip = model(input);
           auto result = solveMIP(input, mip, outPath, timeout);
           return result;
@@ -145,7 +146,7 @@ int main(int argc, const char **argv) {
 
       fs::path currentName(fs::path(filename).stem().string() +
                            fmt::format("-{}-{}-{}", solver, n_channels, run));
-      std::cout << "Solving Instance: " << currentName << "..." << std::endl;
+      std::cout << "Solving Instance " << currentName << " ..." << std::endl;
       if (vm.count("outdir")) {
         for (auto [key, _] : outDirs) {
           outDirs[key].replace_filename(currentName);
@@ -171,14 +172,19 @@ int main(int argc, const char **argv) {
 
       // Solve
       auto t0 = now();
-      Solver solve = getSolver(vm);
+      std::string solverName = vm["solver"].as<std::string>();
+      boost::optional<std::string> outPath =
+          vm.count("outdir")
+              ? boost::optional<std::string>(outDirs["log"].string())
+              : boost::none;
       SolveResult result;
       try {
-        result =
-            solve(input, timeout,
-                  vm.count("outdir")
-                      ? boost::optional<std::string>(outDirs["log"].string())
-                      : boost::none);
+        if (solverName == "cycles") {
+          result = solveLazyCycles(input, outPath, timeout);
+        } else {
+          Solver solve = getSolver(vm);
+          result = solve(input, outPath, timeout);
+        }
       } catch (GRBException ex) {
         fmt::print(stderr, "Gurobi Exception {}: {}\n", ex.getErrorCode(),
                    ex.getMessage());

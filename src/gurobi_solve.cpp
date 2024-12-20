@@ -24,41 +24,30 @@ SolveResult solveMIP(const Pds &state, MIPModel &mipmodel,
   model.set(GRB_DoubleParam_TimeLimit, timeLimit);
 
   model.optimize();
+  SolveResult result = {model.get(GRB_IntAttr_NumVars),
+                        model.get(GRB_IntAttr_NumConstrs),
+                        1.0,
+                        0.0,
+                        model.get(GRB_DoubleAttr_MIPGap),
+                        model.get(GRB_DoubleAttr_NodeCount),
+                        SolveState::Other};
 
   switch (model.get(GRB_IntAttr_Status)) {
   case GRB_INFEASIBLE:
-    return {model.get(GRB_IntAttr_NumVars),
-            model.get(GRB_IntAttr_NumConstrs),
-            1.0,
-            0.0,
-            model.get(GRB_DoubleAttr_MIPGap),
-            model.get(GRB_DoubleAttr_NodeCount),
-            SolveState::Infeasible};
+    result.state = SolveState::Infeasible;
+    break;
   case GRB_OPTIMAL:
-    return {model.get(GRB_IntAttr_NumVars),
-            model.get(GRB_IntAttr_NumConstrs),
-            model.get(GRB_DoubleAttr_ObjBound),
-            model.get(GRB_DoubleAttr_ObjVal),
-            model.get(GRB_DoubleAttr_MIPGap),
-            model.get(GRB_DoubleAttr_NodeCount),
-            SolveState::Optimal};
+    result.lower = model.get(GRB_DoubleAttr_ObjBound);
+    result.upper = model.get(GRB_DoubleAttr_ObjVal);
+    result.state = SolveState::Optimal;
+    break;
   case GRB_TIME_LIMIT:
-    return {model.get(GRB_IntAttr_NumVars),
-            model.get(GRB_IntAttr_NumConstrs),
-            model.get(GRB_DoubleAttr_ObjBound),
-            model.get(GRB_DoubleAttr_ObjVal),
-            model.get(GRB_DoubleAttr_MIPGap),
-            model.get(GRB_DoubleAttr_NodeCount),
-            SolveState::Timeout};
-  default:
-    return {model.get(GRB_IntAttr_NumVars),
-            model.get(GRB_IntAttr_NumConstrs),
-            1.0,
-            0.0,
-            model.get(GRB_DoubleAttr_MIPGap),
-            model.get(GRB_DoubleAttr_NodeCount),
-            SolveState::Other};
+    result.lower = model.get(GRB_DoubleAttr_ObjBound);
+    result.upper = model.get(GRB_DoubleAttr_ObjVal);
+    result.state = SolveState::Timeout;
+    break;
   }
+  return result;
 }
 
 MIPModel brimkovModel(Pds &input) {
@@ -110,7 +99,7 @@ MIPModel brimkovModel(Pds &input) {
       if (input.isZeroInjection(u))
         constr1 += y.at(std::make_pair(u, v));
     }
-    model.addConstr(constr1 == 1);
+    model.addConstr(constr1 >= 1);
 
     // (2) x_w - x_v + (T+1)y_u_v <= T, \forall (u,v) \in A_Z, w \in N[u] -
     // v

@@ -14,7 +14,7 @@ FLAGS = -Wall -Wextra -O3
 
 all: deps pds-lim
 
-pds-lim: main.cpp pds.o graphio.o gurobi_solve.o $(DEPS)
+pds-lim: main.cpp pds.o graphio.o gurobi_solve.o cycle_solve.o $(DEPS)
 	$(CC) -o $@ $^ $(INCS) $(LIBS) $(FLAGS)
 
 deps:
@@ -27,5 +27,8 @@ pds.o: $(SRCPATH)/pds.cpp $(INCPATH)/pds.hpp
 graphio.o: $(SRCPATH)/graphio.cpp $(INCPATH)/graphio.hpp $(INCPATH)/pds.hpp
 	$(CC) -g -c $< $(INCS) $(FLAGS)
 
-gurobi_solve.o: $(SRCPATH)/gurobi_solve.cpp $(INCPATH)/gurobi_solve.hpp $(INCPATH)/gurobi_common.hpp
+gurobi_solve.o: $(SRCPATH)/gurobi_solve.cpp $(INCPATH)/gurobi_solve.hpp $(INCPATH)/gurobi_common.hpp $(INCPATH)/pds.hpp
+	$(CC) -g -c $< $(INCS) $(FLAGS)
+
+cycle_solve.o: $(SRCPATH)/cycle_solve.cpp $(INCPATH)/cycle_solve.hpp $(INCPATH)/gurobi_common.hpp $(INCPATH)/pds.hpp
 	$(CC) -g -c $< $(INCS) $(FLAGS)

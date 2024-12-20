@@ -3,6 +3,7 @@
 Requisitos
 
 * Tener instalado gurobi. La instalación asume que se encuentra en /opt/gurobi1103
+* Tener instalada la libreria program options de boost
 
 Instrucciones de insatalación
 

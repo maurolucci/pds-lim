@@ -27,6 +27,9 @@ GRBEnv &getEnv();
 
 void relaxMIPModel(MIPModel &);
 
+SolveResult solveMIP(const Pds &, MIPModel &, boost::optional<std::string>,
+                     double);
+
 } // namespace pds
 
 #endif // GUROBI_COMMON_HPP

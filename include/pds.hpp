@@ -1,13 +1,12 @@
 #ifndef PDS_HPP
 #define PDS_HPP
-
-#include <boost/range/algorithm.hpp>
 #include <fmt/core.h>
 #include <fmt/ranges.h>
 #include <range/v3/all.hpp>
 
 #include "boost/graph/adjacency_list.hpp"
 #include "boost/graph/graph_traits.hpp"
+#include "boost/range/algorithm.hpp"
 
 namespace pds {
 
@@ -19,6 +18,19 @@ struct Bus {
 
 using PowerGrid =
     boost::adjacency_list<boost::vecS, boost::vecS, boost::undirectedS, Bus>;
+using Vertex = PowerGrid::vertex_descriptor;
+using Edge = std::pair<Vertex, Vertex>;
+using VertexList = std::vector<Vertex>;
+using EdgeList = std::list<Edge>;
+
+struct LabelledVertex {
+  Vertex label;
+};
+
+using PrecedenceDigraph =
+    boost::adjacency_list<boost::vecS, boost::vecS, boost::bidirectionalS,
+                          LabelledVertex>;
+using Node = PrecedenceDigraph::vertex_descriptor;
 
 enum class SolveState { Optimal, Timeout, Infeasible, Other };
 

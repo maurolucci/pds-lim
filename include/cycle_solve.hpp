@@ -1,0 +1,11 @@
+#ifndef CYCLE_SOLVE_HPP
+#define CYCLE_SOLVE_HPP
+
+#include "gurobi_common.hpp"
+#include "pds.hpp"
+
+namespace pds {
+SolveResult solveLazyCycles(Pds &, boost::optional<std::string>, double);
+} // end of namespace pds
+
+#endif // CYCLE_SOLVE_HPP
