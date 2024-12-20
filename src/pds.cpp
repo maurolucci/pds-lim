@@ -32,7 +32,7 @@ VertexList Pds::get_monitored_set(std::map<Vertex, double> &s,
   while (!stop) {
     stop = true;
     for (auto v : boost::make_iterator_range(vertices(graph))) {
-      if (!monitored[v])
+      if (!monitored[v] || !isZeroInjection(v))
         continue;
       size_t count =
           boost::range::count_if(boost::adjacent_vertices(v, graph),

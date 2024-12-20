@@ -76,11 +76,8 @@ MIPModel brimkovModel(Pds &input) {
 
   auto &s = mipmodel.s;
   auto &w = mipmodel.w;
-  std::map<PowerGrid::vertex_descriptor, GRBVar> x;
-  std::map<
-      std::pair<PowerGrid::vertex_descriptor, PowerGrid::vertex_descriptor>,
-      GRBVar>
-      y;
+  std::map<Vertex, GRBVar> x;
+  std::map<Edge, GRBVar> y;
 
   auto &graph = static_cast<const Pds &>(input).get_graph();
   auto n_channels = input.get_n_channels();
@@ -92,8 +89,7 @@ MIPModel brimkovModel(Pds &input) {
         v, model.addVar(0.0, 1.0, 1.0, GRB_BINARY, fmt::format("s_{}", v)));
     x.try_emplace(v, model.addVar(0.0, static_cast<double>(T), 0.0, GRB_INTEGER,
                                   fmt::format("x_{}", v)));
-    for (auto u :
-         boost::make_iterator_range(boost::adjacent_vertices(v, graph))) {
+    for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph))) {
       w.try_emplace(std::make_pair(v, u),
                     model.addVar(0.0, 1.0, 0.0, GRB_BINARY,
                                  fmt::format("w_{}_{}", v, u)));
@@ -124,13 +120,11 @@ MIPModel brimkovModel(Pds &input) {
     // (2) x_w - x_v + (T+1)y_u_v <= T, \forall (u,v) \in A_Z, w \in N[u] -
     // v
     if (input.isZeroInjection(v)) {
-      for (auto u :
-           boost::make_iterator_range(boost::adjacent_vertices(v, graph))) {
+      for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph))) {
         GRBLinExpr constr2 = 0;
         constr2 += x.at(v) - x.at(u) + (T + 1) * y.at(std::make_pair(v, u));
         model.addConstr(constr2 <= T);
-        for (auto w :
-             boost::make_iterator_range(boost::adjacent_vertices(v, graph))) {
+        for (auto w : boost::make_iterator_range(adjacent_vertices(v, graph))) {
           if (w == u)
             continue;
           GRBLinExpr constr2n = 0;
@@ -142,13 +136,10 @@ MIPModel brimkovModel(Pds &input) {
 
     // (3) sum_{u \in N(v)} w_v_u <= (omega_v - 1) s_v, \forall v \in V
     GRBLinExpr constr3 = 0;
-    for (auto u :
-         boost::make_iterator_range(boost::adjacent_vertices(v, graph))) {
+    for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
       constr3 += w.at(std::make_pair(v, u));
-    }
     model.addConstr(constr3 <=
-                    std::min(boost::degree(v, graph), (n_channels - 1)) *
-                        s.at(v));
+                    std::min(degree(v, graph), (n_channels - 1)) * s.at(v));
   }
 
   return mipmodel;
