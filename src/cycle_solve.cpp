@@ -65,20 +65,20 @@ struct LazyCycleCB : public GRBCallback {
       model.addConstr(constr3 <=
                       std::min(boost::degree(v, graph), (n_channels - 1)) *
                           s.at(v));
+    }
 
-      // Build translation function
-      for (auto v : boost::make_iterator_range(vertices(graph))) {
-        if (!input.isZeroInjection(v))
-          continue;
-        for (auto u :
+    // Build translation function
+    for (auto v : boost::make_iterator_range(vertices(graph))) {
+      if (!input.isZeroInjection(v))
+        continue;
+      for (auto u :
+           boost::make_iterator_range(boost::adjacent_vertices(v, graph))) {
+        translate[std::make_pair(v, u)].push_back(std::make_pair(v, u));
+        for (auto w :
              boost::make_iterator_range(boost::adjacent_vertices(v, graph))) {
-          translate[std::make_pair(v, u)].push_back(std::make_pair(v, u));
-          for (auto w :
-               boost::make_iterator_range(boost::adjacent_vertices(v, graph))) {
-            if (w == u)
-              continue;
-            translate[std::make_pair(w, u)].push_back(std::make_pair(v, u));
-          }
+          if (w == u)
+            continue;
+          translate[std::make_pair(w, u)].push_back(std::make_pair(v, u));
         }
       }
     }
@@ -140,7 +140,7 @@ private:
         size_t count = boost::range::count_if(
             boost::adjacent_vertices(v, graph),
             [monitored](auto u) { return monitored[u]; });
-        if (boost::degree(v, graph) - count > 1)
+        if (boost::degree(v, graph) - count != 1)
           continue;
         auto it_u = boost::range::find_if(
             boost::adjacent_vertices(v, graph),
