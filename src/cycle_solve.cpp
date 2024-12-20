@@ -10,9 +10,11 @@ struct LazyCycleCB : public GRBCallback {
   MIPModel mipmodel;
   GRBModel &model;
   std::map<pds::Vertex, GRBVar> &s;
+  std::map<Vertex, double> sValue;
   std::map<Edge, GRBVar> &w;
+  std::map<Edge, double> wValue;
   std::map<Edge, GRBVar> y;
-  const Pds &input;
+  Pds &input;
   const PowerGrid &graph;
   std::map<Edge, EdgeList> translate;
 
@@ -98,12 +100,19 @@ struct LazyCycleCB : public GRBCallback {
     // incumbent)
     case GRB_CB_MIPSOL:
 
-      // Feasibility check
-      VertexList mS = get_monitored_set();
-      size_t nMonitored = boost::range::count_if(
-          vertices(graph), [mS](auto u) { return mS[u]; });
+      // Recover variable values
+      for (auto v : boost::make_iterator_range(vertices(graph))) {
+        sValue[v] = getSolution(s.at(v));
+        for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
+          wValue[std::make_pair(v, u)] =
+              getSolution(w.at(std::make_pair(v, u)));
+      }
 
-      if (nMonitored < boost::num_vertices(graph)) {
+      // Feasibility check
+      VertexList mS = input.get_monitored_set(sValue, wValue);
+      if (!input.isFeasible(mS)) {
+
+        // Find violated cycles
         PrecedenceDigraph digraph = build_precedence_digraph(mS);
         std::list<VertexList> cycles = violatedCycles(digraph, 100);
         addLazyCycles(cycles);
@@ -113,46 +122,6 @@ struct LazyCycleCB : public GRBCallback {
   }
 
 private:
-  VertexList get_monitored_set() {
-
-    VertexList monitored(boost::num_vertices(graph), false);
-
-    // Domiation rule
-    for (auto v : boost::make_iterator_range(vertices(graph))) {
-      if (getSolution(s.at(v)) < 0.5)
-        continue;
-      monitored[v] = true;
-      for (auto u :
-           boost::make_iterator_range(boost::adjacent_vertices(v, graph))) {
-        if (getSolution(w.at(std::make_pair(v, u))) < 0.5)
-          continue;
-        monitored[u] = true;
-      }
-    }
-
-    // Neighborhood-propagation rule
-    bool stop = false;
-    while (!stop) {
-      stop = true;
-      for (auto v : boost::make_iterator_range(vertices(graph))) {
-        if (!monitored[v])
-          continue;
-        size_t count = boost::range::count_if(
-            boost::adjacent_vertices(v, graph),
-            [monitored](auto u) { return monitored[u]; });
-        if (boost::degree(v, graph) - count != 1)
-          continue;
-        auto it_u = boost::range::find_if(
-            boost::adjacent_vertices(v, graph),
-            [monitored](auto u) { return !monitored[u]; });
-        monitored[*it_u] = true;
-        stop = false;
-      }
-    }
-
-    return monitored;
-  }
-
   PrecedenceDigraph build_precedence_digraph(VertexList &isMonitored) {
 
     PrecedenceDigraph digraph;

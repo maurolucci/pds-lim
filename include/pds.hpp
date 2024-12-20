@@ -67,6 +67,15 @@ public:
         vertices(get_graph()), [this](auto v) { return isZeroInjection(v); });
   }
 
+  VertexList get_monitored_set(std::map<Vertex, double> &s,
+                               std::map<Edge, double> &w);
+
+  [[nodiscard]] inline bool isFeasible(VertexList &mS) const {
+    return boost::range::count_if(vertices(graph), [mS](auto u) {
+             return mS[u];
+           }) == static_cast<std::ptrdiff_t>(boost::num_vertices(graph));
+  }
+
 }; // end of class Pds
 
 } // end of namespace pds

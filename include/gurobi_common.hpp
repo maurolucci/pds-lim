@@ -12,11 +12,8 @@ namespace pds {
 
 struct MIPModel {
   std::unique_ptr<GRBModel> model;
-  std::map<PowerGrid::vertex_descriptor, GRBVar> s;
-  std::map<
-      std::pair<PowerGrid::vertex_descriptor, PowerGrid::vertex_descriptor>,
-      GRBVar>
-      w;
+  std::map<Vertex, GRBVar> s;
+  std::map<Edge, GRBVar> w;
   MIPModel();
   MIPModel(MIPModel &&other) = default;
   virtual ~MIPModel();
@@ -27,8 +24,7 @@ GRBEnv &getEnv();
 
 void relaxMIPModel(MIPModel &);
 
-SolveResult solveMIP(const Pds &, MIPModel &, boost::optional<std::string>,
-                     double);
+SolveResult solveMIP(Pds &, MIPModel &, boost::optional<std::string>, double);
 
 } // namespace pds
 

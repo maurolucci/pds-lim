@@ -12,7 +12,7 @@ GRBEnv &getEnv() {
 MIPModel::MIPModel() : model(std::make_unique<GRBModel>(getEnv())), s(), w() {}
 MIPModel::~MIPModel() {}
 
-SolveResult solveMIP(const Pds &state, MIPModel &mipmodel,
+SolveResult solveMIP(Pds &input, MIPModel &mipmodel,
                      boost::optional<std::string> outPath, double timeLimit) {
   auto &model = *mipmodel.model;
   if (outPath.has_value()) {
@@ -47,6 +47,26 @@ SolveResult solveMIP(const Pds &state, MIPModel &mipmodel,
     result.state = SolveState::Timeout;
     break;
   }
+
+  // Check correctness of solution
+  if (model.get(GRB_IntAttr_SolCount) > 0) {
+
+    // Recover variable values
+    const PowerGrid &graph = input.get_graph();
+    std::map<Vertex, double> sValue;
+    std::map<Edge, double> wValue;
+    for (auto v : boost::make_iterator_range(vertices(graph))) {
+      sValue[v] = mipmodel.s.at(v).get(GRB_DoubleAttr_X);
+      for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
+        wValue[std::make_pair(v, u)] =
+            mipmodel.w.at(std::make_pair(v, u)).get(GRB_DoubleAttr_X);
+    }
+
+    VertexList mS = input.get_monitored_set(sValue, wValue);
+    if (!input.isFeasible(mS))
+      throw std::runtime_error("Error: The solution IS NOT FEASIBLE");
+  }
+
   return result;
 }
 
