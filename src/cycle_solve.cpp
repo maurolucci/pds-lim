@@ -137,11 +137,11 @@ private:
           continue;
         if (getSolution(y.at(std::make_pair(u, v))) < 0.5)
           continue;
-        if (isMonitored[u])
-          continue;
-        if (!name.contains(u))
-          name[u] = boost::add_vertex(LabelledVertex{.label = u}, digraph);
-        boost::add_edge(name[u], name[v], digraph);
+        if (!isMonitored[u]) {
+          if (!name.contains(u))
+            name[u] = boost::add_vertex(LabelledVertex{.label = u}, digraph);
+          boost::add_edge(name[u], name[v], digraph);
+        }
         for (auto w :
              boost::make_iterator_range(boost::adjacent_vertices(u, graph))) {
           if (w == v || isMonitored[w])
