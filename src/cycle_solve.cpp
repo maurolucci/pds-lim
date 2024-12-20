@@ -177,7 +177,7 @@ private:
              boost::make_iterator_range(boost::adjacent_vertices(u, graph))) {
           if (w == v || isMonitored[w])
             continue;
-          if (!name.contains(u))
+          if (!name.contains(w))
             name[w] = boost::add_vertex(LabelledVertex{.label = w}, digraph);
           boost::add_edge(name[w], name[v], digraph);
         }
@@ -261,7 +261,7 @@ private:
       GRBLinExpr pathSum;
       for (auto [u, v] : translated)
         pathSum += y.at(std::make_pair(u, v));
-      model.addConstr(pathSum <= cycle.size() - 1);
+      addLazy(pathSum <= cycle.size() - 1);
     }
   }
 };
