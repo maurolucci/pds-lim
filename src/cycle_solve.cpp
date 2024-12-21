@@ -89,6 +89,9 @@ struct LazyCycleCB : public GRBCallback {
   }
 
   SolveResult solve(boost::optional<std::string> logPath, double timeLimit) {
+    if (logPath.has_value()) {
+      model.set(GRB_IntParam_LogToConsole, false);
+    }
     model.set(GRB_IntParam_LazyConstraints, 1);
     return solveMIP(input, mipmodel, logPath, timeLimit);
   }
