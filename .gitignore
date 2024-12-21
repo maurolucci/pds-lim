@@ -34,3 +34,4 @@ pds-lim
 
 # Directories
 /_deps/
+/_*/
