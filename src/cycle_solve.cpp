@@ -121,7 +121,7 @@ struct LazyCycleCB : public GRBCallback {
 
         // Report to callback file
         cbFile << fmt::format(
-                      "#cycles: {}, avg.size{ : .2f}, avg. ext. size {:.2f}",
+                      "#cycles: {}, avg.size: {.2f}, avg. ext. size: {.2f}",
                       cycles.size(), avg.first, avg.second)
                << std::endl;
       }
