@@ -1,5 +1,6 @@
 #include "gurobi_common.hpp"
 
+#include <fstream>
 #include <gurobi_c++.h>
 
 namespace pds {
@@ -17,10 +18,11 @@ struct LazyCycleCB : public GRBCallback {
   Pds &input;
   const PowerGrid &graph;
   std::map<Edge, EdgeList> translate;
+  std::ostream &cbFile;
 
-  LazyCycleCB(Pds &input)
+  LazyCycleCB(Pds &input, std::ostream &callbackFile)
       : mipmodel(), model(*mipmodel.model), s(mipmodel.s), w(mipmodel.w), y(),
-        input(input), graph(input.get_graph()) {
+        input(input), graph(input.get_graph()), cbFile(callbackFile) {
 
     size_t n_channels = input.get_n_channels();
 
@@ -86,9 +88,9 @@ struct LazyCycleCB : public GRBCallback {
     }
   }
 
-  SolveResult solve(boost::optional<std::string> outPath, double timeLimit) {
+  SolveResult solve(boost::optional<std::string> logPath, double timeLimit) {
     model.set(GRB_IntParam_LazyConstraints, 1);
-    return solveMIP(input, mipmodel, outPath, timeLimit);
+    return solveMIP(input, mipmodel, logPath, timeLimit);
   }
 
   void callback() override {
@@ -114,9 +116,17 @@ struct LazyCycleCB : public GRBCallback {
 
         // Find violated cycles
         PrecedenceDigraph digraph = build_precedence_digraph(mS);
-        std::list<VertexList> cycles = violatedCycles(digraph, 100);
-        addLazyCycles(cycles);
+        std::set<VertexList> cycles = violatedCycles(digraph, 1000000);
+        std::pair<double, double> avg = addLazyCycles(cycles);
+
+        // Report to callback file
+        size_t nNode = static_cast<size_t>(model.get(GRB_DoubleAttr_NodeCount));
+        cbFile << fmt::format("# node: {}, # cycles: {}, avg. size {:.2f}, "
+                              "avg. ext. size {:.2f}",
+                              nNode, cycles.size(), avg.first, avg.second)
+               << std::endl;
       }
+
       break;
     }
   }
@@ -156,9 +166,9 @@ private:
     return digraph;
   }
 
-  std::list<VertexList> violatedCycles(PrecedenceDigraph &digraph,
-                                       size_t cyclesLimit) {
-    std::list<VertexList> cycles;
+  std::set<VertexList> violatedCycles(PrecedenceDigraph &digraph,
+                                      size_t cyclesLimit) {
+    std::set<VertexList> cycles;
     // auto randomVertices = boost::range::random_shuffle(vertices(digraph));
 
     for (auto v : boost::make_iterator_range(vertices(digraph))) {
@@ -167,7 +177,7 @@ private:
       VertexList cycle = findCycle(digraph, v);
       if (cycle.empty())
         continue;
-      cycles.push_back(cycle);
+      cycles.insert(cycle);
     }
     return cycles;
   }
@@ -214,32 +224,44 @@ private:
       u = precededBy.at(u).first;
     } while (u != lastVertex);
 
+    // Rotate the cycle so the minium element is in the front
+    boost::range::rotate(cycle, boost::range::min_element(cycle));
+
     return cycle;
   }
 
-  void addLazyCycles(std::list<VertexList> &cycles) {
+  std::pair<double, double> addLazyCycles(std::set<VertexList> &cycles) {
 
-    for (VertexList &cycle : cycles) {
+    size_t accumCycle = 0;
+    size_t accumExt = 0;
+
+    for (const VertexList &cycle : cycles) {
       EdgeList translated;
       for (auto it = cycle.rbegin(); it != cycle.rend();) {
         Vertex v = *it++;
         int u = it != cycle.rend() ? *it : cycle.back();
-        for (auto e : translate.at(std::make_pair(v, u)))
+        for (auto e : translate.at(std::make_pair(v, u))) {
           translated.push_back(e);
+          accumExt++;
+        }
+        accumCycle++;
       }
       GRBLinExpr pathSum;
       for (auto [u, v] : translated)
         pathSum += y.at(std::make_pair(u, v));
       addLazy(pathSum <= cycle.size() - 1);
     }
+
+    return std::make_pair(static_cast<double>(accumCycle) / cycles.size(),
+                          static_cast<double>(accumExt) / cycles.size());
   }
 };
 } // end of namespace
 
-SolveResult solveLazyCycles(Pds &input, boost::optional<std::string> outPath,
-                            double timeLimit) {
-  LazyCycleCB lazyCycles(input);
-  return lazyCycles.solve(outPath, timeLimit);
+SolveResult solveLazyCycles(Pds &input, boost::optional<std::string> logPath,
+                            std::ostream &callbackFile, double timeLimit) {
+  LazyCycleCB lazyCycles(input, callbackFile);
+  return lazyCycles.solve(logPath, timeLimit);
 }
 
 } // end of namespace pds

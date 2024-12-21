@@ -20,8 +20,19 @@ using namespace pds;
 using Solver =
     std::function<SolveResult(Pds &, boost::optional<std::string>, double)>;
 
-std::map<std::string, fs::path> outDirs = {
-    {"log", fs::path()}, {"stat", fs::path()}, {"sol", fs::path()}};
+std::map<std::string, fs::path> outDirs = {{"log", fs::path()},
+                                           {"stat", fs::path()},
+                                           {"sol", fs::path()},
+                                           {"cb", fs::path()}};
+
+class outPut {
+public:
+  std::ofstream cbFileAux;
+  std::ostream &cbFile;
+  outPut(std::ostream &cbStream = std::cout) : cbFileAux(), cbFile(cbStream) {}
+  outPut(std::string sbPath)
+      : cbFileAux(sbPath, std::ofstream::app), cbFile(this->cbFileAux) {}
+};
 
 std::string format_solve_state(SolveState state) {
   std::string name = "unknown";
@@ -61,9 +72,9 @@ auto getSolver(po::variables_map &vm) {
   try {
     return Solver{
         [model = getModel(solverName)](
-            auto &input, boost::optional<std::string> outPath, double timeout) {
+            auto &input, boost::optional<std::string> logPath, double timeout) {
           auto mip = model(input);
-          auto result = solveMIP(input, mip, outPath, timeout);
+          auto result = solveMIP(input, mip, logPath, timeout);
           return result;
         }};
   } catch (std::invalid_argument &ex) {
@@ -170,20 +181,24 @@ int main(int argc, const char **argv) {
       size_t m = boost::num_edges(graph);
       size_t zi = input.numZeroInjection();
 
-      // Solve
-      auto t0 = now();
-      std::string solverName = vm["solver"].as<std::string>();
-      boost::optional<std::string> outPath =
+      // Prepare output files
+      boost::optional<std::string> logPath =
           vm.count("outdir")
               ? boost::optional<std::string>(outDirs["log"].string())
               : boost::none;
+      outPut output =
+          (vm.count("outdir")) ? outPut(outDirs["cb"].string()) : outPut();
+
+      // Solve
+      auto t0 = now();
       SolveResult result;
+      std::string solverName = vm["solver"].as<std::string>();
       try {
         if (solverName == "cycles") {
-          result = solveLazyCycles(input, outPath, timeout);
+          result = solveLazyCycles(input, logPath, output.cbFile, timeout);
         } else {
           Solver solve = getSolver(vm);
-          result = solve(input, outPath, timeout);
+          result = solve(input, logPath, timeout);
         }
       } catch (GRBException ex) {
         fmt::print(stderr, "Gurobi Exception {}: {}\n", ex.getErrorCode(),
