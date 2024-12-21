@@ -120,15 +120,9 @@ struct LazyCycleCB : public GRBCallback {
         std::pair<double, double> avg = addLazyCycles(cycles);
 
         // Report to callback file
-        size_t nNode;
-        try {
-          nNode = static_cast<size_t>(model.get(GRB_DoubleAttr_NodeCount));
-        } catch (GRBException ex) {
-          nNode = 0;
-        }
-        cbFile << fmt::format("# node: {}, # cycles: {}, avg. size {:.2f}, "
-                              "avg. ext. size {:.2f}",
-                              nNode, cycles.size(), avg.first, avg.second)
+        cbFile << fmt::format(
+                      "#cycles: {}, avg.size{ : .2f}, avg. ext. size {:.2f}",
+                      cycles.size(), avg.first, avg.second)
                << std::endl;
       }
 
