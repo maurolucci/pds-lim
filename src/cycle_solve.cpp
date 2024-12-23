@@ -19,10 +19,12 @@ struct LazyCycleCB : public GRBCallback {
   const PowerGrid &graph;
   std::map<Edge, EdgeList> translate;
   std::ostream &cbFile;
+  size_t lazyLimit;
 
-  LazyCycleCB(Pds &input, std::ostream &callbackFile)
+  LazyCycleCB(Pds &input, std::ostream &callbackFile, size_t lzLimit)
       : mipmodel(), model(*mipmodel.model), s(mipmodel.s), w(mipmodel.w), y(),
-        input(input), graph(input.get_graph()), cbFile(callbackFile) {
+        input(input), graph(input.get_graph()), cbFile(callbackFile),
+        lazyLimit(lzLimit) {
 
     size_t n_channels = input.get_n_channels();
 
@@ -119,7 +121,7 @@ struct LazyCycleCB : public GRBCallback {
 
         // Find violated cycles
         PrecedenceDigraph digraph = build_precedence_digraph(mS);
-        std::set<VertexList> cycles = violatedCycles(digraph, 1000000);
+        std::set<VertexList> cycles = violatedCycles(digraph, lazyLimit);
         std::pair<double, double> avg = addLazyCycles(cycles);
 
         // Report to callback file
@@ -261,8 +263,9 @@ private:
 } // end of namespace
 
 SolveResult solveLazyCycles(Pds &input, boost::optional<std::string> logPath,
-                            std::ostream &callbackFile, double timeLimit) {
-  LazyCycleCB lazyCycles(input, callbackFile);
+                            std::ostream &callbackFile, double timeLimit,
+                            size_t lazyLimit) {
+  LazyCycleCB lazyCycles(input, callbackFile, lazyLimit);
   return lazyCycles.solve(logPath, timeLimit);
 }
 

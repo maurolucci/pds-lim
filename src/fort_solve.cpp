@@ -24,11 +24,12 @@ struct LazyFortCB : public GRBCallback {
   std::map<Edge, EdgeList> translate;
   std::ostream &cbFile;
   size_t n_channels;
+  size_t lazyLimit;
 
-  LazyFortCB(Pds &input, std::ostream &callbackFile)
+  LazyFortCB(Pds &input, std::ostream &callbackFile, size_t lzLimit)
       : mipmodel(), model(*mipmodel.model), s(mipmodel.s), w(mipmodel.w), y(),
         input(input), graph(input.get_graph()), cbFile(callbackFile),
-        n_channels(input.get_n_channels()) {
+        n_channels(input.get_n_channels()), lazyLimit(lzLimit) {
 
     model.setCallback(this);
 
@@ -75,7 +76,7 @@ struct LazyFortCB : public GRBCallback {
       if (!input.isFeasible(mS)) {
 
         // Find violated cycles
-        std::list<Fort> forts = violatedForts(mS, 1000000);
+        std::list<Fort> forts = violatedForts(mS, lazyLimit);
         std::pair<double, double> avg = addLazyForts(forts, mS);
 
         // Report to callback file
@@ -190,8 +191,9 @@ private:
 } // namespace
 
 SolveResult solveLazyForts(Pds &input, boost::optional<std::string> logPath,
-                           std::ostream &callbackFile, double timeLimit) {
-  LazyFortCB lazyForts(input, callbackFile);
+                           std::ostream &callbackFile, double timeLimit,
+                           size_t lazyLimit) {
+  LazyFortCB lazyForts(input, callbackFile, lazyLimit);
   return lazyForts.solve(logPath, timeLimit);
 }
 

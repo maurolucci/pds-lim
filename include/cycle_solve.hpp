@@ -6,7 +6,7 @@
 
 namespace pds {
 SolveResult solveLazyCycles(Pds &, boost::optional<std::string>, std::ostream &,
-                            double);
+                            double, size_t);
 } // end of namespace pds
 
 #endif // CYCLE_SOLVE_HPP

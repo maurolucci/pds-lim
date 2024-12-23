@@ -104,6 +104,10 @@ int main(int argc, const char **argv) {
                      "gurobi time limit (seconds)");
   desc.add_options()("outdir,o", po::value<std::string>(),
                      "write outputs to the specified directory");
+  desc.add_options()(
+      "lazy-limit",
+      po::value<size_t>()->default_value(std::numeric_limits<size_t>::max()),
+      "maximum number of lazy contraints added per callback");
   po::positional_options_description pos;
   pos.add("graph", -1);
   po::variables_map vm;
@@ -129,6 +133,7 @@ int main(int argc, const char **argv) {
   size_t repetitions = vm["repeat"].as<size_t>();
   double timeout = vm["timeout"].as<double>();
   size_t n_channels = vm["n-channels"].as<size_t>();
+  size_t lazyLimit = vm["lazy-limit"].as<size_t>();
   std::vector<std::string> inputs;
   if (vm.count("graph")) {
     inputs = vm["graph"].as<std::vector<std::string>>();
@@ -196,9 +201,11 @@ int main(int argc, const char **argv) {
       std::string solverName = vm["solver"].as<std::string>();
       try {
         if (solverName == "cycles") {
-          result = solveLazyCycles(input, logPath, output.cbFile, timeout);
+          result = solveLazyCycles(input, logPath, output.cbFile, timeout,
+                                   lazyLimit);
         } else if (solverName == "forts") {
-          result = solveLazyForts(input, logPath, output.cbFile, timeout);
+          result =
+              solveLazyForts(input, logPath, output.cbFile, timeout, lazyLimit);
         } else {
           Solver solve = getSolver(vm);
           result = solve(input, logPath, timeout);

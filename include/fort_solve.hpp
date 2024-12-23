@@ -6,7 +6,7 @@
 
 namespace pds {
 SolveResult solveLazyForts(Pds &, boost::optional<std::string>, std::ostream &,
-                           double);
+                           double, size_t);
 } // end of namespace pds
 
 #endif // FORT_SOLVE_HPP
