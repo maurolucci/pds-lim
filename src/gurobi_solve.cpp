@@ -13,7 +13,8 @@ MIPModel::MIPModel() : model(std::make_unique<GRBModel>(getEnv())), s(), w() {}
 MIPModel::~MIPModel() {}
 
 SolveResult solveMIP(Pds &input, MIPModel &mipmodel,
-                     boost::optional<std::string> outPath, double timeLimit) {
+                     boost::optional<std::string> outPath,
+                     std::ostream &solFile, double timeLimit) {
   auto &model = *mipmodel.model;
   if (outPath.has_value()) {
     model.set(GRB_IntParam_LogToConsole, false);
@@ -66,6 +67,9 @@ SolveResult solveMIP(Pds &input, MIPModel &mipmodel,
     if (!input.isFeasible(mS))
       throw std::runtime_error("Error: The solution IS NOT FEASIBLE");
   }
+
+  // Print solution
+  mipmodel.write_sol(solFile);
 
   return result;
 }

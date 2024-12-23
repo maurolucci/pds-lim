@@ -28,11 +28,14 @@ std::map<std::string, fs::path> outDirs = {{"log", fs::path()},
 
 class outPut {
 public:
-  std::ofstream cbFileAux;
-  std::ostream &cbFile;
-  outPut(std::ostream &cbStream = std::cout) : cbFileAux(), cbFile(cbStream) {}
-  outPut(std::string sbPath)
-      : cbFileAux(sbPath, std::ofstream::app), cbFile(this->cbFileAux) {}
+  std::ofstream cbFileAux, solFileAux;
+  std::ostream &cbFile, &solFile;
+  outPut(std::ostream &cbStream = std::cout,
+         std::ostream &solStream = std::cout)
+      : cbFileAux(), cbFile(cbStream), solFileAux(), solFile(solStream) {}
+  outPut(std::string sbPath, std::string solPath)
+      : cbFileAux(sbPath, std::ofstream::app), cbFile(this->cbFileAux),
+        solFileAux(solPath, std::ofstream::app), solFile(this->solFileAux) {}
 };
 
 std::string format_solve_state(SolveState state) {
@@ -192,8 +195,9 @@ int main(int argc, const char **argv) {
           vm.count("outdir")
               ? boost::optional<std::string>(outDirs["log"].string())
               : boost::none;
-      outPut output =
-          (vm.count("outdir")) ? outPut(outDirs["cb"].string()) : outPut();
+      outPut output = (vm.count("outdir")) ? outPut(outDirs["cb"].string(),
+                                                    outDirs["sol"].string())
+                                           : outPut();
 
       // Solve
       auto t0 = now();
