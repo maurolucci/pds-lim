@@ -77,9 +77,11 @@ struct LazyFortCB : public GRBCallback {
     case GRB_CB_MIPSOL:
 
       // Recover variable values
+      pmuSet.clear();
       for (auto v : boost::make_iterator_range(vertices(graph))) {
         sValue[v] = getSolution(s.at(v));
-        pmuSet.insert(v);
+        if (sValue[v] > 0.5)
+          pmuSet.insert(v);
         for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
           wValue[std::make_pair(v, u)] =
               getSolution(w.at(std::make_pair(v, u)));
@@ -140,7 +142,7 @@ private:
       sValue.at(v) = 0.0;
       VertexList mS = input.get_monitored_set(sValue, wValue);
       if (!input.isFeasible(mS)) {
-        forts.insert(findFort(pmuSet, mS));
+        forts.insert(findFort(mS));
         sValue.at(v) = 1.0;
       }
     }
@@ -161,12 +163,12 @@ private:
     return begin;
   }
 
-  Fort findFort(const std::set<Vertex> &pmuSet,
-                const VertexList &monitoredSet) {
+  Fort findFort(const VertexList &monitoredSet) {
     Fort fort;
     for (auto u : boost::make_iterator_range(vertices(graph))) {
-      if (!monitoredSet[u])
-        fort.insert(u);
+      if (monitoredSet[u])
+        continue;
+      fort.insert(u);
       for (auto w : boost::make_iterator_range(adjacent_vertices(u, graph)))
         if (!pmuSet.contains(w))
           fort.insert(w);
