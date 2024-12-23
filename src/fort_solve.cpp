@@ -16,6 +16,7 @@ struct LazyFortCB : public GRBCallback {
   GRBModel &model;
   std::map<pds::Vertex, GRBVar> &s;
   std::map<Vertex, double> sValue;
+  std::set<Vertex> pmuSet;
   std::map<Edge, GRBVar> &w;
   std::map<Edge, double> wValue;
   std::map<Edge, GRBVar> y;
@@ -78,6 +79,7 @@ struct LazyFortCB : public GRBCallback {
       // Recover variable values
       for (auto v : boost::make_iterator_range(vertices(graph))) {
         sValue[v] = getSolution(s.at(v));
+        pmuSet.insert(v);
         for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
           wValue[std::make_pair(v, u)] =
               getSolution(w.at(std::make_pair(v, u)));
@@ -89,7 +91,7 @@ struct LazyFortCB : public GRBCallback {
 
         // Find violated cycles
         std::set<Fort> forts = violatedForts(mS, lazyLimit);
-        std::pair<double, double> avg = addLazyForts(forts, mS);
+        std::pair<double, double> avg = addLazyForts(forts);
 
         // Report to callback file
         cbFile << fmt::format("# forts: {}, avg. vertex size: {:.2f}, avg. "
@@ -125,8 +127,8 @@ private:
       boost::copy(adjacent_vertices(v, graph), neighbors.begin());
       if (k < degree(v, graph))
         random_unique(neighbors.begin(), neighbors.end(), k);
-      for (Vertex u : neighbors)
-        wValue.at(std::make_pair(v, u)) = 1.0;
+      for (size_t i = 0; i < k; ++i)
+        wValue.at(std::make_pair(v, neighbors[i])) = 1.0;
     }
 
     // Minimize feasible solution
@@ -138,7 +140,7 @@ private:
       sValue.at(v) = 0.0;
       VertexList mS = input.get_monitored_set(sValue, wValue);
       if (!input.isFeasible(mS)) {
-        forts.insert(findFort(mS));
+        forts.insert(findFort(pmuSet, mS));
         sValue.at(v) = 1.0;
       }
     }
@@ -159,19 +161,20 @@ private:
     return begin;
   }
 
-  Fort findFort(VertexList &monitoredSet) {
+  Fort findFort(const std::set<Vertex> &pmuSet,
+                const VertexList &monitoredSet) {
     Fort fort;
     for (auto u : boost::make_iterator_range(vertices(graph))) {
       if (!monitoredSet[u])
         fort.insert(u);
       for (auto w : boost::make_iterator_range(adjacent_vertices(u, graph)))
-        fort.insert(w);
+        if (!pmuSet.contains(w))
+          fort.insert(w);
     }
     return fort;
   }
 
-  std::pair<double, double> addLazyForts(std::set<Fort> forts,
-                                         const VertexList monitoredSet) {
+  std::pair<double, double> addLazyForts(std::set<Fort> forts) {
 
     size_t accumVertices = 0;
     size_t accumEdges = 0;
@@ -181,16 +184,13 @@ private:
       for (auto v : f) {
         fortSum += s.at(v);
         accumVertices++;
-        for (auto u : boost::make_iterator_range(vertices(graph))) {
-          if (!monitoredSet[u] || sValue.at(u) < 0.5)
+      }
+      for (auto v : pmuSet) {
+        for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph))) {
+          if (wValue.at(std::make_pair(v, u)) > 0.5)
             continue;
-          for (auto z :
-               boost::make_iterator_range(adjacent_vertices(u, graph))) {
-            if (wValue.at(std::make_pair(u, z)) > 0.5)
-              continue;
-            fortSum += w.at(std::make_pair(u, z));
-            accumEdges++;
-          }
+          fortSum += w.at(std::make_pair(v, u));
+          accumEdges++;
         }
       }
       addLazy(fortSum >= 1);
