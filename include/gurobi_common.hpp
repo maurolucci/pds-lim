@@ -22,10 +22,10 @@ struct MIPModel {
       if (var.get(GRB_DoubleAttr_X) > 0.5) {
         solFile << v << ": ";
         for (auto &[e, var2] : w)
-          if (e.first != v || var2.get(GRB_DoubleAttr_X) < 0.5)
+          if (e.first == v && var2.get(GRB_DoubleAttr_X) > 0.5)
             solFile << e.second << " ";
+        solFile << std::endl;
       }
-    solFile << std::endl;
   }
 };
 
