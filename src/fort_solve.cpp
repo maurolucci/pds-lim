@@ -109,11 +109,11 @@ private:
     std::set<Fort> forts;
 
     // Shuffle unmonitored vertices
-    VertexList unmonitoredSet(num_vertices(graph));
+    VertexList unmonitoredSet;
     boost::copy(vertices(graph) |
                     boost::adaptors::filtered(
                         [monitoredSet](auto v) { return !monitoredSet[v]; }),
-                unmonitoredSet.begin());
+                std::back_inserter(unmonitoredSet));
     boost::range::random_shuffle(unmonitoredSet);
 
     // Complete feasible solution
