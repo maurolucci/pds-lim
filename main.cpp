@@ -1,4 +1,5 @@
 #include "cycle_solve.hpp"
+#include "fort_solve.hpp"
 #include "graphio.hpp"
 #include "gurobi_solve.hpp"
 #include "pds.hpp"
@@ -196,6 +197,8 @@ int main(int argc, const char **argv) {
       try {
         if (solverName == "cycles") {
           result = solveLazyCycles(input, logPath, output.cbFile, timeout);
+        } else if (solverName == "forts") {
+          result = solveLazyForts(input, logPath, output.cbFile, timeout);
         } else {
           Solver solve = getSolver(vm);
           result = solve(input, logPath, timeout);
