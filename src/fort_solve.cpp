@@ -44,6 +44,18 @@ struct LazyFortCB : public GRBCallback {
                                    fmt::format("w_{}_{}", v, u)));
       }
     }
+
+    // (2) sum_{u \in N(v)} w_v_u <= (omega_v - 1) s_v, \forall v \in V
+    for (auto v : boost::make_iterator_range(vertices(graph))) {
+      GRBLinExpr constr3 = 0;
+      for (auto u :
+           boost::make_iterator_range(boost::adjacent_vertices(v, graph))) {
+        constr3 += w.at(std::make_pair(v, u));
+      }
+      model.addConstr(constr3 <=
+                      std::min(boost::degree(v, graph), (n_channels - 1)) *
+                          s.at(v));
+    }
   }
 
   SolveResult solve(boost::optional<std::string> logPath, double timeLimit) {
@@ -76,7 +88,7 @@ struct LazyFortCB : public GRBCallback {
       if (!input.isFeasible(mS)) {
 
         // Find violated cycles
-        std::list<Fort> forts = violatedForts(mS, lazyLimit);
+        std::set<Fort> forts = violatedForts(mS, lazyLimit);
         std::pair<double, double> avg = addLazyForts(forts, mS);
 
         // Report to callback file
@@ -91,13 +103,13 @@ struct LazyFortCB : public GRBCallback {
   }
 
 private:
-  std::list<Fort> violatedForts(const VertexList &monitoredSet,
-                                size_t fortsLimit) {
+  std::set<Fort> violatedForts(const VertexList &monitoredSet,
+                               size_t fortsLimit) {
 
-    std::list<Fort> forts;
+    std::set<Fort> forts;
 
     // Shuffle unmonitored vertices
-    VertexList unmonitoredSet;
+    VertexList unmonitoredSet(num_vertices(graph));
     boost::copy(vertices(graph) |
                     boost::adaptors::filtered(
                         [monitoredSet](auto v) { return !monitoredSet[v]; }),
@@ -126,7 +138,7 @@ private:
       sValue.at(v) = 0.0;
       VertexList mS = input.get_monitored_set(sValue, wValue);
       if (!input.isFeasible(mS)) {
-        forts.push_back(findFort(mS));
+        forts.insert(findFort(mS));
         sValue.at(v) = 1.0;
       }
     }
@@ -158,7 +170,7 @@ private:
     return fort;
   }
 
-  std::pair<double, double> addLazyForts(std::list<Fort> forts,
+  std::pair<double, double> addLazyForts(std::set<Fort> forts,
                                          const VertexList monitoredSet) {
 
     size_t accumVertices = 0;
@@ -174,7 +186,7 @@ private:
             continue;
           for (auto z :
                boost::make_iterator_range(adjacent_vertices(u, graph))) {
-            if (wValue.at(std::make_pair(u, z)) < 0.5)
+            if (wValue.at(std::make_pair(u, z)) > 0.5)
               continue;
             fortSum += w.at(std::make_pair(u, z));
             accumEdges++;
