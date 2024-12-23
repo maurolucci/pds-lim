@@ -34,7 +34,8 @@ GRBEnv &getEnv();
 
 void relaxMIPModel(MIPModel &);
 
-SolveResult solveMIP(Pds &, MIPModel &, boost::optional<std::string>, double);
+SolveResult solveMIP(Pds &, MIPModel &, boost::optional<std::string>,
+                     std::ostream &solFile, double);
 
 } // namespace pds
 

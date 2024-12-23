@@ -18,13 +18,14 @@ struct LazyCycleCB : public GRBCallback {
   Pds &input;
   const PowerGrid &graph;
   std::map<Edge, EdgeList> translate;
-  std::ostream &cbFile;
+  std::ostream &cbFile, &solFile;
   size_t lazyLimit;
 
-  LazyCycleCB(Pds &input, std::ostream &callbackFile, size_t lzLimit)
+  LazyCycleCB(Pds &input, std::ostream &callbackFile,
+              std::ostream &solutionFile, size_t lzLimit)
       : mipmodel(), model(*mipmodel.model), s(mipmodel.s), w(mipmodel.w), y(),
         input(input), graph(input.get_graph()), cbFile(callbackFile),
-        lazyLimit(lzLimit) {
+        solFile(solutionFile), lazyLimit(lzLimit) {
 
     size_t n_channels = input.get_n_channels();
 
@@ -95,7 +96,7 @@ struct LazyCycleCB : public GRBCallback {
       model.set(GRB_IntParam_LogToConsole, false);
     }
     model.set(GRB_IntParam_LazyConstraints, 1);
-    return solveMIP(input, mipmodel, logPath, timeLimit);
+    return solveMIP(input, mipmodel, logPath, solFile, timeLimit);
   }
 
   void callback() override {
@@ -263,9 +264,9 @@ private:
 } // end of namespace
 
 SolveResult solveLazyCycles(Pds &input, boost::optional<std::string> logPath,
-                            std::ostream &callbackFile, double timeLimit,
-                            size_t lazyLimit) {
-  LazyCycleCB lazyCycles(input, callbackFile, lazyLimit);
+                            std::ostream &callbackFile, std::ostream &solFile,
+                            double timeLimit, size_t lazyLimit) {
+  LazyCycleCB lazyCycles(input, callbackFile, solFile, lazyLimit);
   return lazyCycles.solve(logPath, timeLimit);
 }
 

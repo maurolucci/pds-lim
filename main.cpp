@@ -18,8 +18,8 @@
 namespace fs = std::filesystem;
 namespace po = boost::program_options;
 using namespace pds;
-using Solver =
-    std::function<SolveResult(Pds &, boost::optional<std::string>, double)>;
+using Solver = std::function<SolveResult(Pds &, boost::optional<std::string>,
+                                         std::ostream &, double)>;
 
 std::map<std::string, fs::path> outDirs = {{"log", fs::path()},
                                            {"stat", fs::path()},
@@ -75,13 +75,13 @@ auto getModel(const std::string &name) {
 auto getSolver(po::variables_map &vm) {
   std::string solverName = vm["solver"].as<std::string>();
   try {
-    return Solver{
-        [model = getModel(solverName)](
-            auto &input, boost::optional<std::string> logPath, double timeout) {
-          auto mip = model(input);
-          auto result = solveMIP(input, mip, logPath, timeout);
-          return result;
-        }};
+    return Solver{[model = getModel(solverName)](
+                      auto &input, boost::optional<std::string> logPath,
+                      std::ostream &solFile, double timeout) {
+      auto mip = model(input);
+      auto result = solveMIP(input, mip, logPath, solFile, timeout);
+      return result;
+    }};
   } catch (std::invalid_argument &ex) {
     fmt::print(stderr, "{}", ex.what());
     throw ex;
@@ -206,14 +206,14 @@ int main(int argc, const char **argv) {
       std::string solverName = vm["solver"].as<std::string>();
       try {
         if (solverName == "cycles") {
-          result = solveLazyCycles(input, logPath, output.cbFile, timeout,
-                                   lazyLimit);
+          result = solveLazyCycles(input, logPath, output.cbFile,
+                                   output.solFile, timeout, lazyLimit);
         } else if (solverName == "forts") {
-          result =
-              solveLazyForts(input, logPath, output.cbFile, timeout, lazyLimit);
+          result = solveLazyForts(input, logPath, output.cbFile, output.solFile,
+                                  timeout, lazyLimit);
         } else {
           Solver solve = getSolver(vm);
-          result = solve(input, logPath, timeout);
+          result = solve(input, logPath, output.solFile, timeout);
         }
       } catch (GRBException ex) {
         fmt::print(stderr, "Gurobi Exception {}: {}\n", ex.getErrorCode(),

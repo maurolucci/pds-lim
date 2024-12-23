@@ -23,14 +23,16 @@ struct LazyFortCB : public GRBCallback {
   Pds &input;
   const PowerGrid &graph;
   std::map<Edge, EdgeList> translate;
-  std::ostream &cbFile;
+  std::ostream &cbFile, &solFile;
   size_t n_channels;
   size_t lazyLimit;
 
-  LazyFortCB(Pds &input, std::ostream &callbackFile, size_t lzLimit)
+  LazyFortCB(Pds &input, std::ostream &callbackFile, std::ostream &solutionFile,
+             size_t lzLimit)
       : mipmodel(), model(*mipmodel.model), s(mipmodel.s), w(mipmodel.w), y(),
         input(input), graph(input.get_graph()), cbFile(callbackFile),
-        n_channels(input.get_n_channels()), lazyLimit(lzLimit) {
+        solFile(solutionFile), n_channels(input.get_n_channels()),
+        lazyLimit(lzLimit) {
 
     model.setCallback(this);
 
@@ -64,7 +66,7 @@ struct LazyFortCB : public GRBCallback {
       model.set(GRB_IntParam_LogToConsole, false);
     }
     model.set(GRB_IntParam_LazyConstraints, 1);
-    return solveMIP(input, mipmodel, logPath, timeLimit);
+    return solveMIP(input, mipmodel, logPath, solFile, timeLimit);
   }
 
   void callback() override {
@@ -205,9 +207,9 @@ private:
 } // namespace
 
 SolveResult solveLazyForts(Pds &input, boost::optional<std::string> logPath,
-                           std::ostream &callbackFile, double timeLimit,
-                           size_t lazyLimit) {
-  LazyFortCB lazyForts(input, callbackFile, lazyLimit);
+                           std::ostream &callbackFile, std::ostream &solFile,
+                           double timeLimit, size_t lazyLimit) {
+  LazyFortCB lazyForts(input, callbackFile, solFile, lazyLimit);
   return lazyForts.solve(logPath, timeLimit);
 }
 
