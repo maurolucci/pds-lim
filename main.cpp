@@ -32,10 +32,11 @@ public:
   std::ostream &cbFile, &solFile;
   outPut(std::ostream &cbStream = std::cout,
          std::ostream &solStream = std::cout)
-      : cbFileAux(), cbFile(cbStream), solFileAux(), solFile(solStream) {}
+      : cbFileAux(), solFileAux(), cbFile(cbStream), solFile(solStream) {}
   outPut(std::string sbPath, std::string solPath)
-      : cbFileAux(sbPath, std::ofstream::app), cbFile(this->cbFileAux),
-        solFileAux(solPath, std::ofstream::app), solFile(this->solFileAux) {}
+      : cbFileAux(sbPath, std::ofstream::app),
+        solFileAux(solPath, std::ofstream::app), cbFile(this->cbFileAux),
+        solFile(this->solFileAux) {}
 };
 
 std::string format_solve_state(SolveState state) {
