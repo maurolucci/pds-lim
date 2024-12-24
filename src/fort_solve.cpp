@@ -156,7 +156,7 @@ private:
           continue;
         bool isMonitored = false;
         for (auto z : boost::make_iterator_range(adjacent_vertices(u, graph)))
-          if (sValue.at(z) > 0.5 && wValue.at(std::make_pair(v, u)) > 0.5) {
+          if (sValue.at(z) > 0.5 && wValue.at(std::make_pair(z, u)) > 0.5) {
             isMonitored = true;
             break;
           }
