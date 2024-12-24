@@ -259,17 +259,10 @@ private:
         sValue.at(v) = 1.0;
 
         // Acomodate everything
-        for (auto u : boost::make_iterator_range(vertices(graph))) {
-          mS[u] = true;
-          inNeighbors[u].clear();
-          outNeighbors[u].clear();
-        }
         observedBy[v].insert(v);
         for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
           if (wValue.at(std::make_pair(v, u)) > 0.5)
             observedBy[u].insert(v);
-        propagates.clear();
-        propagatedBy.clear();
       }
     }
 
