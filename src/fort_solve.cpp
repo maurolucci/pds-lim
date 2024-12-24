@@ -143,13 +143,30 @@ private:
 
       sValue.at(v) = 0.0;
 
-      // Can be easily fixed?
+      // can v be monitored by domination rule?
       bool fixed = false;
       for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
         if (sValue.at(u) > 0.5 && wValue.at(std::make_pair(u, v)) > 0.5) {
           fixed = true;
           break;
         }
+      // has every neighbor of v a pmu or can be monitored by domination rule?
+      if (fixed) {
+        for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph))) {
+          if (sValue.at(u) > 0.5)
+            continue;
+          fixed = false;
+          for (auto z : boost::make_iterator_range(adjacent_vertices(u, graph)))
+            if (sValue.at(z) > 0.5 && wValue.at(std::make_pair(z, u)) > 0.5) {
+              fixed = true;
+              break;
+            }
+          if (fixed)
+            continue;
+          else
+            break;
+        }
+      }
 
       if (fixed)
         continue;
@@ -159,49 +176,6 @@ private:
         forts.insert(findFort(mS));
         sValue.at(v) = 1.0;
       }
-
-      /*
-            // Recompute monitored set
-            std::list<Vertex> changed;
-            changed.push_back(v);
-            for (auto u : boost::make_iterator_range(adjacent_vertices(v,
-         graph))) changed.push_back(u); while (!changed.empty()) { Vertex u
-         = changed.front(); changed.pop_front(); if (sValue.at(u) > 0.5) //
-         u has a pmu -> it's still monitored continue; bool isMonitored =
-         false; for (auto z :
-         boost::make_iterator_range(adjacent_vertices(u, graph))) if
-         (sValue.at(z) > 0.5 && wValue.at(std::make_pair(z, u)) > 0.5) {
-                  isMonitored = true;
-                  break;
-                }
-              if (isMonitored) // u is monitored by z with dom. rule
-                continue;
-              for (auto z : boost::make_iterator_range(adjacent_vertices(u,
-         graph))) { if (!input.isZeroInjection(z) || !mS[z]) continue;
-                size_t count = boost::range::count_if(
-                    boost::adjacent_vertices(z, graph),
-                    [mS, u](auto y) { return y != u && mS[y]; });
-                if (boost::degree(z, graph) - count != 1)
-                  continue;
-                isMonitored = true;
-                break;
-              }
-              if (isMonitored)
-                continue;
-              if (!mS[u])
-                continue;
-              mS[u] = false;
-              for (auto z : boost::make_iterator_range(adjacent_vertices(u,
-         graph))) changed.push_back(z);
-            }
-
-      VertexList mS2 = input.get_monitored_set(sValue, wValue);
-      assert(mS == mS2);
-      if (!input.isFeasible(mS2)) {
-        forts.insert(findFort(mS2));
-        sValue.at(v) = 1.0;
-      }
-      */
     }
 
     return forts;
