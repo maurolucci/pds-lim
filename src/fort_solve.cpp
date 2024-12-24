@@ -260,12 +260,51 @@ private:
         sValue.at(v) = 1.0;
 
         // Acomodate everything
+        std::list<Vertex> changes;
+        if (observedBy[v].empty())
+          changes.push_back(v);
         observedBy[v].insert(v);
-        for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
-          if (wValue.at(std::make_pair(v, u)) > 0.5)
+        mS[v] = true;
+        for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph))) {
+          if (wValue.at(std::make_pair(v, u)) > 0.5) {
+            if (observedBy[u].empty())
+              changes.push_back(u);
             observedBy[u].insert(v);
-        for (auto u : boost::make_iterator_range(vertices(graph)))
-          mS[u] = true;
+            mS[u] = true;
+            for (auto z :
+                 boost::make_iterator_range(adjacent_vertices(u, graph)))
+              changes.push_back(z);
+          }
+          changes.push_back(u);
+        }
+
+        while (!changes.empty()) {
+          auto u = changes.front();
+          changes.pop_front();
+          // u can propagate?
+          if (input.isZeroInjection(u)) {
+            size_t count =
+                boost::range::count_if(boost::adjacent_vertices(u, graph),
+                                       [mS](auto y) { return mS[y]; });
+            if (boost::degree(u, graph) - count != 1)
+              continue;
+            auto it_y =
+                boost::range::find_if(boost::adjacent_vertices(u, graph),
+                                      [mS](auto y) { return !mS[y]; });
+            mS[*it_y] = true;
+            propagates[u] = *it_y;
+            propagatedBy[*it_y] = u;
+            inNeighbors[*it_y].insert(u);
+            outNeighbors[u].insert(*it_y);
+            changes.push_back(*it_y);
+            for (auto z :
+                 boost::make_iterator_range(adjacent_vertices(*it_y, graph))) {
+              changes.push_back(z);
+              inNeighbors[*it_y].insert(z);
+              outNeighbors[z].insert(*it_y);
+            }
+          }
+        }
       }
     }
 
