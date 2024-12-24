@@ -196,7 +196,8 @@ private:
             changes.push_back(x);
           }
           // u cannot join a propagation
-          for (Vertex x : outNeighbors[u]) {
+          std::set<Vertex> uOut(outNeighbors[u]);
+          for (Vertex x : uOut) {
             // x can no longer be propagated
             Vertex y = propagatedBy[x];
             propagates.erase(y);
