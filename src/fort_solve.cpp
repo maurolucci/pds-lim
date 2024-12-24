@@ -6,7 +6,7 @@
 
 namespace pds {
 
-using Fort = std::set<Vertex>;
+using Fort = std::pair<std::set<Vertex>, std::set<Edge>>;
 
 namespace {
 
@@ -170,10 +170,15 @@ private:
     for (auto u : boost::make_iterator_range(vertices(graph))) {
       if (monitoredSet[u])
         continue;
-      fort.insert(u);
-      for (auto w : boost::make_iterator_range(adjacent_vertices(u, graph)))
-        if (!pmuSet.contains(w))
-          fort.insert(w);
+      fort.first.insert(u);
+      for (auto z : boost::make_iterator_range(adjacent_vertices(u, graph))) {
+        if (!monitoredSet[z])
+          continue;
+        if (!pmuSet.contains(z))
+          fort.first.insert(z);
+        else
+          fort.second.insert(std::make_pair(z, u));
+      }
     }
     return fort;
   }
@@ -185,17 +190,13 @@ private:
 
     for (auto &f : forts) {
       GRBLinExpr fortSum;
-      for (auto v : f) {
+      for (auto v : f.first) {
         fortSum += s.at(v);
         accumVertices++;
       }
-      for (auto v : pmuSet) {
-        for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph))) {
-          if (wValue.at(std::make_pair(v, u)) > 0.5)
-            continue;
-          fortSum += w.at(std::make_pair(v, u));
-          accumEdges++;
-        }
+      for (auto e : f.second) {
+        fortSum += w.at(e);
+        accumEdges++;
       }
       addLazy(fortSum >= 1);
     }
