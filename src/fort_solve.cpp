@@ -263,6 +263,8 @@ private:
         for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
           if (wValue.at(std::make_pair(v, u)) > 0.5)
             observedBy[u].insert(v);
+        for (auto u : boost::make_iterator_range(vertices(graph)))
+          mS[u] = true;
       }
     }
 
