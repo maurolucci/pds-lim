@@ -123,19 +123,36 @@ private:
     boost::range::random_shuffle(unmonitoredSet);
 
     // Complete feasible solution
+    std::vector<std::set<Vertex>> observedBy(num_vertices(graph),
+                                             std::set<Vertex>());
     for (Vertex v : unmonitoredSet) {
       sValue.at(v) = 1.0;
+      observedBy[v].insert(v);
       // Apply random domination rules
-      size_t k = std::min(degree(v, graph), n_channels - 1);
-      VertexList neighbors(degree(v, graph));
-      boost::copy(adjacent_vertices(v, graph), neighbors.begin());
-      if (k < degree(v, graph))
+      VertexList neighbors;
+      boost::copy(adjacent_vertices(v, graph) |
+                      boost::adaptors::filtered([unmonitoredSet](auto v) {
+                        return boost::range::find(unmonitoredSet, v) !=
+                               unmonitoredSet.end();
+                      }),
+                  std::back_inserter(neighbors));
+      size_t k = std::min(neighbors.size(), n_channels - 1);
+      if (k < neighbors.size())
         random_unique(neighbors.begin(), neighbors.end(), k);
-      for (size_t i = 0; i < k; ++i)
+      for (size_t i = 0; i < k; ++i) {
         wValue.at(std::make_pair(v, neighbors[i])) = 1.0;
+        observedBy[neighbors[i]].insert(v);
+      }
     }
+    VertexList mS(num_vertices(graph), true);
 
     // Minimize feasible solution
+    std::vector<std::set<Vertex>> inNeighbors(num_vertices(graph),
+                                              std::set<Vertex>());
+    std::vector<std::set<Vertex>> outNeighbors(num_vertices(graph),
+                                               std::set<Vertex>());
+    std::map<Vertex, Vertex> propagates;
+    std::map<Vertex, Vertex> propagatedBy;
     for (Vertex v : unmonitoredSet) {
 
       if (forts.size() >= fortsLimit)
@@ -143,38 +160,113 @@ private:
 
       sValue.at(v) = 0.0;
 
-      // can v be monitored by domination rule?
-      bool fixed = false;
+      std::list<Vertex> changes;
+      observedBy[v].erase(v);
+      changes.push_back(v);
       for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
-        if (sValue.at(u) > 0.5 && wValue.at(std::make_pair(u, v)) > 0.5) {
-          fixed = true;
-          break;
+        if (wValue.at(std::make_pair(v, u)) > 0.5) {
+          observedBy[u].erase(v);
+          changes.push_back(u);
         }
-      // has every neighbor of v a pmu or can be monitored by domination rule?
-      if (fixed) {
-        for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph))) {
-          if (sValue.at(u) > 0.5)
-            continue;
-          fixed = false;
-          for (auto z : boost::make_iterator_range(adjacent_vertices(u, graph)))
-            if (sValue.at(z) > 0.5 && wValue.at(std::make_pair(z, u)) > 0.5) {
-              fixed = true;
-              break;
+
+      std::set<Vertex> needsPropagation;
+      while (!changes.empty()) {
+        Vertex u = changes.front();
+        changes.pop_front();
+        if (observedBy[u].empty()) {
+          // u is no longer monitored
+          mS[u] = false;
+          needsPropagation.insert(u);
+          // u cannot propagate anymore
+          if (propagates.contains(u)) {
+            Vertex x = propagates[u];
+            propagates.erase(u);
+            propagatedBy.erase(x);
+            mS[x] = false;
+            needsPropagation.insert(x);
+            inNeighbors[x].erase(u);
+            outNeighbors[u].erase(x);
+            for (auto y :
+                 boost::make_iterator_range(adjacent_vertices(u, graph))) {
+              if (y == x)
+                continue;
+              inNeighbors[x].erase(y);
+              outNeighbors[y].erase(x);
             }
-          if (fixed)
-            continue;
-          else
-            break;
+            changes.push_back(x);
+          }
+          // u cannot join a propagation
+          for (Vertex x : outNeighbors[u]) {
+            // x can no longer be propagated
+            Vertex y = propagatedBy[x];
+            propagates.erase(y);
+            propagatedBy.erase(x);
+            mS[x] = false;
+            needsPropagation.insert(x);
+            inNeighbors[x].erase(y);
+            outNeighbors[y].erase(x);
+            for (auto z :
+                 boost::make_iterator_range(adjacent_vertices(y, graph))) {
+              if (z == x)
+                continue;
+              inNeighbors[x].erase(z);
+              outNeighbors[z].erase(x);
+            }
+            changes.push_back(x);
+          }
         }
       }
 
-      if (fixed)
-        continue;
+      bool keepGoing = true;
+      while (keepGoing) {
+        keepGoing = false;
+        for (auto u : needsPropagation) {
+          for (auto x :
+               boost::make_iterator_range(adjacent_vertices(u, graph))) {
+            if (!mS[x] || !input.isZeroInjection(x))
+              continue;
+            size_t count = boost::range::count_if(
+                boost::adjacent_vertices(x, graph),
+                [mS, u](auto y) { return y != u && mS[y]; });
+            if (boost::degree(x, graph) - count != 1)
+              continue;
+            mS[u] = true;
+            propagates[x] = u;
+            propagatedBy[u] = x;
+            inNeighbors[u].insert(x);
+            outNeighbors[x].insert(u);
+            for (auto y :
+                 boost::make_iterator_range(adjacent_vertices(x, graph))) {
+              if (y == u)
+                continue;
+              inNeighbors[u].insert(y);
+              outNeighbors[y].insert(u);
+            }
+            keepGoing = true;
+            needsPropagation.erase(u);
+            break;
+          }
+        }
+      }
 
-      VertexList mS = input.get_monitored_set(sValue, wValue);
-      if (!input.isFeasible(mS)) {
-        forts.insert(findFort(mS));
+      VertexList mS2 = input.get_monitored_set(sValue, wValue);
+      assert(mS == mS2);
+      if (!input.isFeasible(mS2)) {
+        forts.insert(findFort(mS2));
         sValue.at(v) = 1.0;
+
+        // Acomodate everything
+        for (auto u : boost::make_iterator_range(vertices(graph))) {
+          mS[u] = true;
+          inNeighbors[u].clear();
+          outNeighbors[u].clear();
+        }
+        observedBy[v].insert(v);
+        for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
+          if (wValue.at(std::make_pair(v, u)) > 0.5)
+            observedBy[u].insert(v);
+        propagates.clear();
+        propagatedBy.clear();
       }
     }
 
