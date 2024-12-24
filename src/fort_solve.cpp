@@ -298,8 +298,12 @@ private:
             outNeighbors[u].insert(*it_y);
             changes.push_back(*it_y);
             for (auto z :
-                 boost::make_iterator_range(adjacent_vertices(*it_y, graph))) {
+                 boost::make_iterator_range(adjacent_vertices(*it_y, graph)))
               changes.push_back(z);
+            for (auto z :
+                 boost::make_iterator_range(adjacent_vertices(u, graph))) {
+              if (z == *it_y)
+                continue;
               inNeighbors[*it_y].insert(z);
               outNeighbors[z].insert(*it_y);
             }
