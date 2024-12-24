@@ -136,8 +136,8 @@ private:
     }
 
     // Minimize feasible solution
-    VertexList mS(num_vertices(graph), true);
     for (Vertex v : unmonitoredSet) {
+      VertexList mS(num_vertices(graph), true);
 
       if (forts.size() >= fortsLimit)
         break;
