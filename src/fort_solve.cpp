@@ -168,7 +168,7 @@ private:
           size_t count = boost::range::count_if(
               boost::adjacent_vertices(z, graph),
               [mS, u](auto y) { return y != u && mS[y]; });
-          if (boost::degree(v, graph) - count != 1)
+          if (boost::degree(z, graph) - count != 1)
             continue;
           isMonitored = true;
           break;
