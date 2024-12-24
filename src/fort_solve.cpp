@@ -220,6 +220,7 @@ private:
       bool keepGoing = true;
       while (keepGoing) {
         keepGoing = false;
+        std::set<Vertex> propagated;
         for (auto u : needsPropagation) {
           for (auto x :
                boost::make_iterator_range(adjacent_vertices(u, graph))) {
@@ -243,10 +244,12 @@ private:
               outNeighbors[y].insert(u);
             }
             keepGoing = true;
-            needsPropagation.erase(u);
+            propagated.insert(u);
             break;
           }
         }
+        for (auto u : propagated)
+          needsPropagation.erase(u);
       }
 
       VertexList mS2 = input.get_monitored_set(sValue, wValue);
