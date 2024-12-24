@@ -261,14 +261,48 @@ private:
 
         // Acomodate everything
         std::list<Vertex> changes;
-        if (observedBy[v].empty())
+        // v ahora se monitorea solo
+        if (observedBy[v].empty()) {
           changes.push_back(v);
+          // Ya no necesita que lo propaguen
+          if (propagatedBy.contains(v)) {
+            Vertex u = propagatedBy[v];
+            propagatedBy.erase(v);
+            propagates.erase(u);
+            inNeighbors[v].erase(u);
+            outNeighbors[u].erase(v);
+            for (auto y :
+                 boost::make_iterator_range(adjacent_vertices(u, graph))) {
+              if (y == v)
+                continue;
+              inNeighbors[v].erase(y);
+              outNeighbors[y].erase(v);
+            }
+          }
+        }
         observedBy[v].insert(v);
         mS[v] = true;
+        // v monitorea a sus vecinos
         for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph))) {
           if (wValue.at(std::make_pair(v, u)) > 0.5) {
-            if (observedBy[u].empty())
+            if (observedBy[u].empty()) {
               changes.push_back(u);
+              // u ya no necesita que lo propaguen
+              if (propagatedBy.contains(u)) {
+                Vertex y = propagatedBy[u];
+                propagatedBy.erase(u);
+                propagates.erase(y);
+                inNeighbors[u].erase(y);
+                outNeighbors[y].erase(u);
+                for (auto z :
+                     boost::make_iterator_range(adjacent_vertices(y, graph))) {
+                  if (z == u)
+                    continue;
+                  inNeighbors[u].erase(z);
+                  outNeighbors[z].erase(u);
+                }
+              }
+            }
             observedBy[u].insert(v);
             mS[u] = true;
             for (auto z :
@@ -278,6 +312,7 @@ private:
           changes.push_back(u);
         }
 
+        // Propagate!
         while (!changes.empty()) {
           auto u = changes.front();
           changes.pop_front();
