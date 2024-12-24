@@ -175,6 +175,8 @@ private:
         }
         if (isMonitored)
           continue;
+        if (!mS[u])
+          continue;
         mS[u] = false;
         for (auto z : boost::make_iterator_range(adjacent_vertices(u, graph)))
           changed.push_back(z);
