@@ -252,7 +252,7 @@ private:
   bool try_propagation_to(Vertex v, VertexList &monitoredSet) {
     for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
       if (check_propagation(u, v, monitoredSet)) {
-        propagate(u, v, monitoredSet)
+        propagate(u, v, monitoredSet);
         return true;
       }
     return false;
@@ -326,18 +326,18 @@ private:
 
   bool try_despropagate(Vertex v, VertexList &monitoredSet) {
     if (propagator.contains(v)) {
-      despropagate(propagator[v], v, monitoresSet);
+      despropagate(propagator[v], v, monitoredSet);
       return true;
     }
     return false;
   }
 
   std::set<Vertex> despropagate(std::list<Vertex> &candidates, VertexList &monitoredSet) {
-    std::set<Vertex> changed ();
+    std::set<Vertex> changed;
     while (!candidates.empty()) {
       Vertex u = candidates.front();
       candidates.pop_front();
-      changed.push_back(u);
+      changed.insert(u);
 
       // u cannot propagate anymore
       if (propagates.contains(u)) {
