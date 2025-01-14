@@ -347,7 +347,8 @@ private:
       }
 
       // u cannot be involved in a propagation
-      for (Vertex v : boost::make_iterator_range(out_edges(u, digraph))) {
+      for (auto e : boost::make_iterator_range(out_edges(u, digraph))) {
+        Vertex v = target(e, digraph);
         // v can no longer be propagated
         Vertex y = propagator[v];
         despropagate(y, v, monitoredSet);
