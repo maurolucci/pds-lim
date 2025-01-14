@@ -174,6 +174,7 @@ private:
 
       // Feasibility check
       VertexList mS2 = input.get_monitored_set(sValue, wValue);
+      fmt::format("mS: {},\t mS2: {}", mS, mS2);
       assert(mS == mS2);
       if (!input.isFeasible(mS)) {
         
