@@ -32,7 +32,7 @@ struct LazyFortCB : public GRBCallback {
       : mipmodel(), model(*mipmodel.model), s(mipmodel.s), w(mipmodel.w), y(),
         input(input), graph(input.get_graph()), cbFile(callbackFile),
         solFile(solutionFile), n_channels(input.get_n_channels()),
-        lazyLimit(lzLimit), observers(num_vertices(graph), std::set<Vertex>()) {
+        lazyLimit(lzLimit) {
 
     model.setCallback(this);
 
@@ -57,10 +57,6 @@ struct LazyFortCB : public GRBCallback {
                       std::min(degree(v, graph), (n_channels - 1)) *
                           s.at(v));
     }
-
-    // Initialize precedense digraph
-    for (auto v : boost::make_iterator_range(vertices(graph)))
-      add_vertex(LabelledVertex{.label = v}, digraph);
 
   }
 
@@ -149,6 +145,14 @@ private:
         wValue.at(std::make_pair(v, neighbors[i])) = 1.0;      
     }
 
+    // Initialize components
+    observers = std::vector<std::set<Vertex>> (num_vertices(graph), std::set<Vertex> ());
+    propagates.clear();
+    propagator.clear();
+    digraph.clear();
+    for (auto v : boost::make_iterator_range(vertices(graph)))
+      add_vertex(LabelledVertex{.label = v}, digraph);
+
     // Copy of monitored set
     VertexList mS (monitoredSet);
 
@@ -173,9 +177,9 @@ private:
       propagate_to(changed2, mS);
 
       // Feasibility check
-      VertexList mS2 = input.get_monitored_set(sValue, wValue);
-      std::cout << fmt::format("mS: {},\t mS2: {}\n", mS, mS2);
-      assert(mS == mS2);
+      //VertexList mS2 = input.get_monitored_set(sValue, wValue);
+      //std::cout << fmt::format("mS: {},\t mS2: {}\n", mS, mS2);
+      //assert(mS == mS2);
       if (!input.isFeasible(mS)) {
         
         // Find and insert fort
@@ -242,12 +246,7 @@ private:
           changed.push_back(u);
         }
       }
-    // Quick fix
-    std::list<Vertex> changed2;
-    for (auto v: changed)
-      if (!try_propagation_to(v, monitoredSet))
-        changed2.push_back(v);
-    return changed2;
+    return changed;
   }
 
   bool try_propagation_to(Vertex v, VertexList &monitoredSet) {
@@ -269,7 +268,7 @@ private:
   }
 
   bool check_propagation(Vertex from, Vertex to, VertexList &monitoredSet) {
-    if (!monitoredSet[from] || !input.isZeroInjection(from))
+    if (monitoredSet[to] || !monitoredSet[from] || !input.isZeroInjection(from) || propagates.contains(from))
       return false;
     size_t count = boost::range::count_if(
         adjacent_vertices(from, graph),
@@ -348,7 +347,8 @@ private:
       }
 
       // u cannot be involved in a propagation
-      for (auto e : boost::make_iterator_range(out_edges(u, digraph))) {
+      while (out_degree(u, digraph) > 0) {
+        auto e = *out_edges(u, digraph).first;
         Vertex v = target(e, digraph);
         // v can no longer be propagated
         Vertex y = propagator[v];
