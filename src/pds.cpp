@@ -28,6 +28,7 @@ VertexList Pds::get_monitored_set(std::map<Vertex, double> &s,
   }
 
   // Neighborhood-propagation rule
+
   /*
   bool stop = false;
   while (!stop) {

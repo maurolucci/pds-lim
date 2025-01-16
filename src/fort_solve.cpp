@@ -195,9 +195,11 @@ private:
         // Try propagations from changed vertices or their neighbors
         std::set<Vertex> changed4; 
         for (auto u: changed3) {
-          changed4.insert(u);
+          if (input.isZeroInjection(u))
+            changed4.insert(u);
           for (auto y: boost::make_iterator_range(adjacent_vertices(u, graph)))
-            changed4.insert(y);
+            if (input.isZeroInjection(y) && mS[y])
+              changed4.insert(y);
         }
         std::list<Vertex> changed5 (changed4.begin(), changed4.end());
         propagate_from(changed5, mS);
@@ -304,10 +306,12 @@ private:
       if (!try_propagation_from(v, monitoredSet))
         continue;
       Vertex u = propagates[v];
-      candidates.push_back(u);
-      revised[u] = false;
+      if (input.isZeroInjection(u)) {
+        candidates.push_back(u);
+        revised[u] = false;
+      }
       for (auto y: boost::make_iterator_range(adjacent_vertices(u, graph)))
-        if (y != v) {
+        if (y != v && input.isZeroInjection(y) && monitoredSet[y]) {
           candidates.push_back(y);
           revised[y] = false;
         }
