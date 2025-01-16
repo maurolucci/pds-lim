@@ -68,7 +68,7 @@ VertexList Pds::get_monitored_set(std::map<Vertex, double> &s,
     if (isZeroInjection(*it_u))
       candidates.push_back(*it_u);
     for (auto y: boost::make_iterator_range(adjacent_vertices(*it_u, graph)))
-      if (y != v && isZeroInjection(y)) 
+      if (y != v && monitored[y] && isZeroInjection(y)) 
         candidates.push_back(y);
   }
 
