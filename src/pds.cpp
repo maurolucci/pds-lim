@@ -76,8 +76,8 @@ VertexList Pds::get_monitored_set(std::map<Vertex, double> &s,
 
     candidates.push_back(*it_u);
     revised[*it_u] = false;
-    for (auto y: boost::make_iterator_range(adjacent_vertices(*it_u, graph)))
-      if (y != v) {
+    for (auto y: boost::make_iterator_range(adjacent_vertices(v, graph)))
+      if (y != *it_u) {
         candidates.push_back(y);
         revised[y] = false;
       }
