@@ -78,11 +78,8 @@ VertexList Pds::get_monitored_set(std::map<Vertex, double> &s,
       candidates.insert(*it_u);
     revised[*it_u] = false;
     for (auto y: boost::make_iterator_range(adjacent_vertices(v, graph)))
-      if (y != *it_u) {
-        if (isZeroInjection(y))
-          candidates.insert(y);
-        revised[y] = false;
-      }
+      if (y != *it_u && if (isZeroInjection(y)) 
+        candidates.insert(y);
   }
 
   return monitored;
