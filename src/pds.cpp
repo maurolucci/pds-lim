@@ -14,25 +14,16 @@ VertexList Pds::get_monitored_set(std::map<Vertex, double> &s,
                                   std::map<Edge, double> &w) {
 
   VertexList monitored(num_vertices(graph), false);
-  std::list<Vertex> candidates;
 
   // Domiation rule
   for (auto v : boost::make_iterator_range(vertices(graph))) {
     if (s.at(v) < 0.5)
       continue;
     monitored[v] = true;
-    
-    if (isZeroInjection(v))
-      candidates.push_back(v);
-    
     for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph))) {
       if (w.at(std::make_pair(v, u)) < 0.5)
         continue;
       monitored[u] = true;
-
-      if (isZeroInjection(u))
-        candidates.push_back(u);
-
     }
   }
 
@@ -56,13 +47,22 @@ VertexList Pds::get_monitored_set(std::map<Vertex, double> &s,
       stop = false;
     }
   }*/
-  VertexList revised (num_vertices(graph), false);
-  while (!candidates.empty()) {
-    Vertex v = candidates.front();
-    candidates.pop_front();
-    if (revised[v])
+
+  std::set<Vertex> candidates;
+  for (auto v : boost::make_iterator_range(vertices(graph))) { 
+    if (!monitored[v] || !isZeroInjection(v))
       continue;
-    revised[v] = true;
+    candidates.insert(v);
+    for (auto u: boost::make_iterator_range(adjacent_vertices(v, graph))) {
+      if (!monitored[u] || !isZeroInjection(u))
+        continue;
+      candidates.insert(u);
+    }
+  }
+
+  while (!candidates.empty()) {
+    Vertex v = *candidates.begin();
+    candidates.erase(v);
 
     size_t count =
         boost::range::count_if(boost::adjacent_vertices(v, graph),
@@ -74,11 +74,13 @@ VertexList Pds::get_monitored_set(std::map<Vertex, double> &s,
                               [monitored](auto u) { return !monitored[u]; });
     monitored[*it_u] = true;
 
-    candidates.push_back(*it_u);
+    if (isZeroInjection(*it_u))
+      candidates.insert(*it_u);
     revised[*it_u] = false;
     for (auto y: boost::make_iterator_range(adjacent_vertices(v, graph)))
       if (y != *it_u) {
-        candidates.push_back(y);
+        if (isZeroInjection(y))
+          candidates.insert(y);
         revised[y] = false;
       }
   }
