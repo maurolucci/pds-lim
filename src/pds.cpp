@@ -14,20 +14,30 @@ VertexList Pds::get_monitored_set(std::map<Vertex, double> &s,
                                   std::map<Edge, double> &w) {
 
   VertexList monitored(num_vertices(graph), false);
+  std::list<Vertex> candidates;
 
   // Domiation rule
   for (auto v : boost::make_iterator_range(vertices(graph))) {
     if (s.at(v) < 0.5)
       continue;
     monitored[v] = true;
+    
+    if (isZeroInjection(v))
+      candidates.push_back(v);
+    
     for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph))) {
       if (w.at(std::make_pair(v, u)) < 0.5)
         continue;
       monitored[u] = true;
+
+      if (isZeroInjection(u))
+        candidates.push_back(u);
+
     }
   }
 
   // Neighborhood-propagation rule
+  /*
   bool stop = false;
   while (!stop) {
     stop = true;
@@ -45,6 +55,32 @@ VertexList Pds::get_monitored_set(std::map<Vertex, double> &s,
       monitored[*it_u] = true;
       stop = false;
     }
+  }*/
+  VertexList revised (num_vertices(graph), false);
+  while (!candidates.empty()) {
+    Vertex v = candidates.front();
+    candidates.pop_front();
+    if (revised[v])
+      continue;
+    revised[v] = true;
+
+    size_t count =
+        boost::range::count_if(boost::adjacent_vertices(v, graph),
+                                [monitored](auto u) { return monitored[u]; });
+    if (boost::degree(v, graph) - count != 1)
+      continue;
+    auto it_u =
+        boost::range::find_if(boost::adjacent_vertices(v, graph),
+                              [monitored](auto u) { return !monitored[u]; });
+    monitored[*it_u] = true;
+
+    candidates.push_back(*it_u);
+    revised[*it_u] = false;
+    for (auto y: boost::make_iterator_range(adjacent_vertices(*it_u, graph)))
+      if (y != v) {
+        candidates.push_back(y);
+        revised[y] = false;
+      }
   }
 
   return monitored;
