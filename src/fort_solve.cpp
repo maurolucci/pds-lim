@@ -193,7 +193,7 @@ private:
           (void) try_despropagate(u, mS);
 
         // Try propagations from changed vertices or their neighbors
-        std::set<Vertex> changed4; 
+        std::list<Vertex> changed4; 
         for (auto u: changed3) {
           if (input.isZeroInjection(u))
             changed4.push_back(u);
