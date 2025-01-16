@@ -63,7 +63,6 @@ VertexList Pds::get_monitored_set(std::map<Vertex, double> &s,
   while (!candidates.empty()) {
     Vertex v = *candidates.begin();
     candidates.erase(v);
-
     size_t count =
         boost::range::count_if(boost::adjacent_vertices(v, graph),
                                 [monitored](auto u) { return monitored[u]; });
@@ -73,12 +72,10 @@ VertexList Pds::get_monitored_set(std::map<Vertex, double> &s,
         boost::range::find_if(boost::adjacent_vertices(v, graph),
                               [monitored](auto u) { return !monitored[u]; });
     monitored[*it_u] = true;
-
     if (isZeroInjection(*it_u))
       candidates.insert(*it_u);
-    revised[*it_u] = false;
     for (auto y: boost::make_iterator_range(adjacent_vertices(v, graph)))
-      if (y != *it_u && if (isZeroInjection(y)) 
+      if (y != *it_u && isZeroInjection(y)) 
         candidates.insert(y);
   }
 
