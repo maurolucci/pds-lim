@@ -50,9 +50,10 @@ VertexList Pds::get_monitored_set(std::map<Vertex, double> &s,
 
   std::set<Vertex> candidates;
   for (auto v : boost::make_iterator_range(vertices(graph))) { 
-    if (!monitored[v] || !isZeroInjection(v))
+    if (!monitored[v])
       continue;
-    candidates.insert(v);
+    if (isZeroInjection(v))
+      candidates.insert(v);
     for (auto u: boost::make_iterator_range(adjacent_vertices(v, graph))) {
       if (!monitored[u] || !isZeroInjection(u))
         continue;
