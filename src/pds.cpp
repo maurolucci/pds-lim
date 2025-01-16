@@ -28,7 +28,7 @@ VertexList Pds::get_monitored_set(std::map<Vertex, double> &s,
   }
 
   // Neighborhood-propagation rule
-  /*
+  
   bool stop = false;
   while (!stop) {
     stop = true;
@@ -46,8 +46,9 @@ VertexList Pds::get_monitored_set(std::map<Vertex, double> &s,
       monitored[*it_u] = true;
       stop = false;
     }
-  }*/
+  }
 
+/*
   std::set<Vertex> candidates;
   for (auto v : boost::make_iterator_range(vertices(graph))) { 
     if (!monitored[v])
@@ -79,7 +80,7 @@ VertexList Pds::get_monitored_set(std::map<Vertex, double> &s,
       if (y != v && isZeroInjection(y)) 
         candidates.insert(y);
   }
-
+*/
   return monitored;
 }
 
