@@ -28,7 +28,7 @@ VertexList Pds::get_monitored_set(std::map<Vertex, double> &s,
   }
 
   // Neighborhood-propagation rule
-  
+  /*
   bool stop = false;
   while (!stop) {
     stop = true;
@@ -46,25 +46,16 @@ VertexList Pds::get_monitored_set(std::map<Vertex, double> &s,
       monitored[*it_u] = true;
       stop = false;
     }
-  }
+  }*/
 
-/*
-  std::set<Vertex> candidates;
-  for (auto v : boost::make_iterator_range(vertices(graph))) { 
-    if (!monitored[v])
-      continue;
-    if (isZeroInjection(v))
-      candidates.insert(v);
-    for (auto u: boost::make_iterator_range(adjacent_vertices(v, graph))) {
-      if (!monitored[u] || !isZeroInjection(u))
-        continue;
-      candidates.insert(u);
-    }
-  }
+  std::list<Vertex> candidates;
+  for (auto v : boost::make_iterator_range(vertices(graph)))
+    if (monitored[v] && isZeroInjection(v))
+      candidates.push_back(v);
 
   while (!candidates.empty()) {
-    Vertex v = *candidates.begin();
-    candidates.erase(v);
+    Vertex v = candidates.front();
+    candidates.pop_front();
     size_t count =
         boost::range::count_if(boost::adjacent_vertices(v, graph),
                                 [monitored](auto u) { return monitored[u]; });
@@ -75,12 +66,12 @@ VertexList Pds::get_monitored_set(std::map<Vertex, double> &s,
                               [monitored](auto u) { return !monitored[u]; });
     monitored[*it_u] = true;
     if (isZeroInjection(*it_u))
-      candidates.insert(*it_u);
+      candidates.push_back(*it_u);
     for (auto y: boost::make_iterator_range(adjacent_vertices(*it_u, graph)))
       if (y != v && isZeroInjection(y)) 
-        candidates.insert(y);
+        candidates.push_back(y);
   }
-*/
+
   return monitored;
 }
 
