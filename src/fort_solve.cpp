@@ -196,13 +196,12 @@ private:
         std::set<Vertex> changed4; 
         for (auto u: changed3) {
           if (input.isZeroInjection(u))
-            changed4.insert(u);
+            changed4.push_back(u);
           for (auto y: boost::make_iterator_range(adjacent_vertices(u, graph)))
             if (input.isZeroInjection(y) && mS[y])
-              changed4.insert(y);
+              changed4.push_back(y);
         }
-        std::list<Vertex> changed5 (changed4.begin(), changed4.end());
-        propagate_from(changed5, mS);
+        propagate_from(changed4, mS);
 
       }
 
@@ -296,25 +295,17 @@ private:
   }
 
   void propagate_from(std::list<Vertex> &candidates, VertexList &monitoredSet) {
-    VertexList revised (num_vertices(graph), false);
     while (!candidates.empty()) {
       Vertex v = candidates.front();
       candidates.pop_front();
-      if (revised[v])
-        continue;
-      revised[v] = true;
       if (!try_propagation_from(v, monitoredSet))
         continue;
       Vertex u = propagates[v];
-      if (input.isZeroInjection(u)) {
+      if (input.isZeroInjection(u))
         candidates.push_back(u);
-        revised[u] = false;
-      }
       for (auto y: boost::make_iterator_range(adjacent_vertices(u, graph)))
-        if (y != v && input.isZeroInjection(y) && monitoredSet[y]) {
+        if (y != v && input.isZeroInjection(y) && monitoredSet[y])
           candidates.push_back(y);
-          revised[y] = false;
-        }
     }
   }
 
