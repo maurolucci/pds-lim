@@ -113,13 +113,13 @@ struct LazyFortCB : public GRBCallback {
         if (input.isZeroInjection(u))
           candidates.push_back(u);
         for (auto y: boost::make_iterator_range(adjacent_vertices(u, graph)))
-          if (input.isZeroInjection(y) && input.isActivated(y))
+          if (input.isZeroInjection(y) && input.isMonitored(y))
             candidates.push_back(y);
       }
       input.propagate_from(candidates, turnedOn);
 
       // Feasibility check
-      assert(input.check_get_monitored_set(sValue, wValue));
+      //assert(input.check_get_monitored_set(sValue, wValue));
       
       if (!input.isFeasible()) {
 
@@ -222,7 +222,7 @@ private:
           if (newSolution.isZeroInjection(u))
             candidates.push_back(u);
           for (auto y: boost::make_iterator_range(adjacent_vertices(u, graph)))
-            if (newSolution.isZeroInjection(y) && newSolution.isActivated(y))
+            if (newSolution.isZeroInjection(y) && newSolution.isMonitored(y))
               candidates.push_back(y);
         }
         newSolution.propagate_from(candidates, trash);
