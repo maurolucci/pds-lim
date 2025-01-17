@@ -114,7 +114,7 @@ struct LazyFortCB : public GRBCallback {
           if (input.isZeroInjection(y) && input.isActivated(y))
             candidates.push_back(y);
       }
-      input.propagate_from(candidates)
+      input.propagate_from(candidates);
 
       // Feasibility check
       assert(input.check_get_monitored_set(sValue, wValue));
