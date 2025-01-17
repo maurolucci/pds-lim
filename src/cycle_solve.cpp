@@ -143,7 +143,7 @@ struct LazyCycleCB : public GRBCallback {
       if (!input.isFeasible()) {
 
         // Find violated cycles
-        PrecedenceDigraph digraph = build_precedence_digraph(input);
+        PrecedenceDigraph digraph = build_precedence_digraph();
         std::set<VertexList> cycles = violatedCycles(digraph, lazyLimit);
         std::pair<double, double> avg = addLazyCycles(cycles);
 
