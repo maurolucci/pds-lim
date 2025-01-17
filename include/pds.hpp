@@ -63,10 +63,10 @@ private:
   void despropagate_from(Vertex v, std::list<Vertex> &turnedOff);
   void despropagate(Vertex from, Vertex to, std::list<Vertex> &turnedOff);
 
-  [[nodiscard]] bool try_propagation_to(Vertex v);
-  [[nodiscard]] bool try_propagation_from(Vertex v);
+  [[nodiscard]] bool try_propagation_to(Vertex v, std::list<Vertex> &turnedOn);
+  [[nodiscard]] bool try_propagation_from(Vertex v, std::list<Vertex> &turnedOn);
   [[nodiscard]] bool check_propagation(Vertex from, Vertex to);
-  void propagate(Vertex from, Vertex to);
+  void propagate(Vertex from, Vertex to, std::list<Vertex> &turnedOn);
 
 public:
   Pds();
@@ -119,8 +119,8 @@ public:
     std::list<Vertex> &turnedOn, std::list<Vertex> &turnedOff);
   void deactivate(Vertex v, std::list<Vertex> &turnedOff);
 
-  void propagate_to(std::list<Vertex> &candidates);
-  void propagate_from(std::list<Vertex> &candidates);
+  void propagate_to(std::list<Vertex> &candidates, std::list<Vertex> &turnedOn);
+  void propagate_from(std::list<Vertex> &candidates, std::list<Vertex> &turnedOn);
 
   [[nodiscard]] bool check_get_monitored_set(std::map<Vertex, double> &s,
                                std::map<Edge, double> &w);
