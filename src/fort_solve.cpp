@@ -96,6 +96,7 @@ struct LazyFortCB : public GRBCallback {
       input.propagate_to(turnedOff);
 
       // Second activate vertices
+      turnedOff.clear();
       std::list<Vertex> turnedOn;
       for (auto v : boost::make_iterator_range(vertices(graph)))
         if (getSolution(s.at(v)) > 0.5) {
@@ -105,6 +106,8 @@ struct LazyFortCB : public GRBCallback {
               neighbors.push_back(u);
           input.activate(v, neighbors, turnedOn, turnedOff);
         }
+      // Try propagation to turned off vertices
+      input.propagate_to(turnedOff);
       // Try propagation from turned on vertices or their neighbors
       std::list<Vertex> candidates; 
       for (auto u: turnedOn) { 
