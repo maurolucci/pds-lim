@@ -15,9 +15,7 @@ struct LazyFortCB : public GRBCallback {
   MIPModel mipmodel;
   GRBModel &model;
   std::map<pds::Vertex, GRBVar> &s;
-  std::map<Vertex, double> sValue;
   std::map<Edge, GRBVar> &w;
-  std::map<Edge, double> wValue;
   std::map<Edge, GRBVar> y;
   Pds &input;
   const PowerGrid &graph;
@@ -76,15 +74,6 @@ struct LazyFortCB : public GRBCallback {
     // incumbent)
     case GRB_CB_MIPSOL:
 
-      // Recover variable values
-      for (auto v : boost::make_iterator_range(vertices(graph))) {
-        sValue[v] = getSolution(s.at(v));
-        if (sValue[v] > 0.5)
-        for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
-          wValue[std::make_pair(v, u)] =
-              getSolution(w.at(std::make_pair(v, u)));
-      }
-
       // Update solution
 
       // First deactivate vertices
@@ -117,10 +106,8 @@ struct LazyFortCB : public GRBCallback {
             candidates.push_back(y);
       }
       input.propagate_from(candidates, turnedOn);
-
-      // Feasibility check
-      //assert(input.check_get_monitored_set(sValue, wValue));
       
+      // Feasibility check
       if (!input.isFeasible()) {
 
         // Find violated cycles
@@ -171,19 +158,6 @@ private:
       }
     }
 
-    // Initialize components
-    /*
-    observers = std::vector<std::set<Vertex>> (num_vertices(graph), std::set<Vertex> ());
-    propagates.clear();
-    propagator.clear();
-    digraph.clear();
-    for (auto v : boost::make_iterator_range(vertices(graph)))
-      add_vertex(LabelledVertex{.label = v}, digraph);
-    */
-
-    // Copy of monitored set
-    // VertexList mS (monitoredSet);
-
     // Activate all unmonitored vertices
     // (propagation is unnecessary here)
     std::list<Vertex> trash;
@@ -204,9 +178,6 @@ private:
       newSolution.propagate_to(turnedOff, trash);
 
       // Feasibility check
-      //VertexList mS2 = input.get_monitored_set(sValue, wValue);
-      //std::cout << fmt::format("mS: {},\t mS2: {}\n", mS, mS2);
-      //assert(mS == mS2);
       if (!newSolution.isFeasible()) {
         
         // Find and insert fort

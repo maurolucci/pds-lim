@@ -34,27 +34,6 @@ VertexList Pds::get_monitored_set(std::map<Vertex, double> &s,
   }
 
   // Neighborhood-propagation rule
-
-  /*
-  bool stop = false;
-  while (!stop) {
-    stop = true;
-    for (auto v : boost::make_iterator_range(vertices(graph))) {
-      if (!monitored[v] || !isZeroInjection(v))
-        continue;
-      size_t count =
-          boost::range::count_if(boost::adjacent_vertices(v, graph),
-                                 [monitored](auto u) { return monitored[u]; });
-      if (boost::degree(v, graph) - count != 1)
-        continue;
-      auto it_u =
-          boost::range::find_if(boost::adjacent_vertices(v, graph),
-                                [monitored](auto u) { return !monitored[u]; });
-      monitored[*it_u] = true;
-      stop = false;
-    }
-  }*/
-
   std::list<Vertex> candidates;
   for (auto v : boost::make_iterator_range(vertices(graph)))
     if (monitored[v] && isZeroInjection(v))

@@ -11,9 +11,7 @@ struct LazyCycleCB : public GRBCallback {
   MIPModel mipmodel;
   GRBModel &model;
   std::map<pds::Vertex, GRBVar> &s;
-  std::map<Vertex, double> sValue;
   std::map<Edge, GRBVar> &w;
-  std::map<Edge, double> wValue;
   std::map<Edge, GRBVar> y;
   Pds &input;
   const PowerGrid &graph;
@@ -108,20 +106,44 @@ struct LazyCycleCB : public GRBCallback {
     // incumbent)
     case GRB_CB_MIPSOL:
 
-      // Recover variable values
-      for (auto v : boost::make_iterator_range(vertices(graph))) {
-        sValue[v] = getSolution(s.at(v));
-        for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
-          wValue[std::make_pair(v, u)] =
-              getSolution(w.at(std::make_pair(v, u)));
-      }
+      // Update solution
 
+      // First deactivate vertices
+      std::list<Vertex> turnedOff, turnedOn;
+      for (auto v : boost::make_iterator_range(vertices(graph)))
+        if (getSolution(s.at(v)) < 0.5)
+          input.deactivate(v, turnedOff);
+      // Try propagation to turned off vertices
+      input.propagate_to(turnedOff, turnedOn);
+
+      // Second activate vertices
+      turnedOff.clear();
+      for (auto v : boost::make_iterator_range(vertices(graph)))
+        if (getSolution(s.at(v)) > 0.5) {
+          std::vector<Vertex> neighbors;
+          for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
+            if (getSolution(w.at(std::make_pair(v, u))) > 0.5)
+              neighbors.push_back(u);
+          input.activate(v, neighbors, turnedOn, turnedOff);
+        }
+      // Try propagation to turned off vertices
+      input.propagate_to(turnedOff, turnedOn);
+      // Try propagation from turned on vertices or their neighbors
+      std::list<Vertex> candidates; 
+      for (auto u: turnedOn) { 
+        if (input.isZeroInjection(u))
+          candidates.push_back(u);
+        for (auto y: boost::make_iterator_range(adjacent_vertices(u, graph)))
+          if (input.isZeroInjection(y) && input.isMonitored(y))
+            candidates.push_back(y);
+      }
+      input.propagate_from(candidates, turnedOn);
+      
       // Feasibility check
-      VertexList mS = input.get_monitored_set(sValue, wValue);
-      if (!input.isFeasible(mS)) {
+      if (!input.isFeasible()) {
 
         // Find violated cycles
-        PrecedenceDigraph digraph = build_precedence_digraph(mS);
+        PrecedenceDigraph digraph = build_precedence_digraph(input);
         std::set<VertexList> cycles = violatedCycles(digraph, lazyLimit);
         std::pair<double, double> avg = addLazyCycles(cycles);
 
@@ -137,12 +159,12 @@ struct LazyCycleCB : public GRBCallback {
   }
 
 private:
-  PrecedenceDigraph build_precedence_digraph(VertexList &isMonitored) {
+  PrecedenceDigraph build_precedence_digraph() {
 
     PrecedenceDigraph digraph;
     std::map<Vertex, Vertex> name;
     for (auto v : boost::make_iterator_range(vertices(graph))) {
-      if (isMonitored[v])
+      if (input.isMonitored(v))
         continue;
       if (!name.contains(v))
         name[v] = boost::add_vertex(LabelledVertex{.label = v}, digraph);
@@ -152,14 +174,14 @@ private:
           continue;
         if (getSolution(y.at(std::make_pair(u, v))) < 0.5)
           continue;
-        if (!isMonitored[u]) {
+        if (!input.isMonitored(u)) {
           if (!name.contains(u))
             name[u] = boost::add_vertex(LabelledVertex{.label = u}, digraph);
           boost::add_edge(name[u], name[v], digraph);
         }
         for (auto w :
              boost::make_iterator_range(boost::adjacent_vertices(u, graph))) {
-          if (w == v || isMonitored[w])
+          if (w == v || input.isMonitored(w))
             continue;
           if (!name.contains(w))
             name[w] = boost::add_vertex(LabelledVertex{.label = w}, digraph);
