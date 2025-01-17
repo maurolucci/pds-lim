@@ -102,7 +102,7 @@ struct LazyFortCB : public GRBCallback {
         }
 
       // Apply propagation
-      if (!turnedOn.empty) {
+      if (!turnedOn.empty()) {
         std::list<Vertex> candidates; 
         for (auto u: turnedOn) { 
           if (input.isZeroInjection(u))
