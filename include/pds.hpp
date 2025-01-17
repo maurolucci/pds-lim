@@ -48,6 +48,24 @@ class Pds {
 private:
   PowerGrid graph;
   size_t n_channels;
+  VertexList activated;
+  VertexList monitoredSet;
+  std::vector<std::set<Vertex>> observers;
+  std::map<Vertex, Vertex> propagates;
+  std::map<Vertex, Vertex> propagator;
+  PrecedenceDigraph digraph;
+
+  void Pds::activate_neighbor(Vertex from, Vertex to, std::list<Vertex> &turnedOn);
+  void Pds::deactivate_neighbor(Vertex from, Vertex to, std::list<Vertex> &turnedOff);
+
+  void Pds::despropagate_to(Vertex to, std::list<Vertex> &turnedOff);
+  void Pds::despropagate_from(Vertex v, std::list<Vertex> &turnedOff);
+  void Pds::despropagate(Vertex from, Vertex to, std::list<Vertex> &turnedOff);
+
+  bool Pds::try_propagation_to(Vertex v);
+  bool Pds::try_propagation_from(Vertex v);
+  bool Pds::check_propagation(Vertex from, Vertex to);
+  void Pds::propagate(Vertex from, Vertex to);
 
 public:
   Pds();
@@ -58,7 +76,7 @@ public:
   [[nodiscard]] inline size_t get_n_channels() const { return n_channels; }
 
   [[nodiscard]] inline bool
-  isZeroInjection(PowerGrid::vertex_descriptor v) const {
+  isZeroInjection(Vertex v) const {
     return graph[v].zero_injection;
   }
 
@@ -67,14 +85,45 @@ public:
         vertices(get_graph()), [this](auto v) { return isZeroInjection(v); });
   }
 
+  [[nodiscard]] inline bool isMonitored(Vertex v) const {
+    return monitoredSet[v];
+  }
+
+  [[nodiscard]] inline bool isActivated(Vertex v) const {
+    return activated[v];
+  }
+
   VertexList get_monitored_set(std::map<Vertex, double> &s,
                                std::map<Edge, double> &w);
+
+  [[nodiscard]] inline void get_unmonitored_set(std::vector<Vertex> &vec) const {
+    boost::copy(vertices(graph) |
+                    boost::adaptors::filtered(
+                        [monitoredSet](auto v) { return !monitoredSet[v]; }),
+                std::back_inserter(vec));
+  }
 
   [[nodiscard]] inline bool isFeasible(VertexList &mS) const {
     return boost::range::count_if(vertices(graph), [mS](auto u) {
              return mS[u];
            }) == static_cast<std::ptrdiff_t>(boost::num_vertices(graph));
   }
+
+  [[nodiscard]] inline bool isFeasible() const {
+    return boost::range::count_if(vertices(graph), [monitoredSet](auto u) {
+             return monitoredSet[u];
+           }) == static_cast<std::ptrdiff_t>(boost::num_vertices(graph));
+  }
+
+  void Pds::activate(Vertex v, std::set<Vertex> &neighbors, 
+    std::list<Vertex> &turnedOn, std::list<Vertex> &turnedOff);
+  void Pds::deactivate(Vertex v, std::list<Vertex> &turnedOff);
+
+  void Pds::propagate_to(std::set<Vertex> &candidates);
+  void Pds::propagate_from(std::list<Vertex> &candidates);
+
+  bool check_get_monitored_set(std::map<Vertex, double> &s,
+                               std::map<Edge, double> &w);
 
 }; // end of class Pds
 

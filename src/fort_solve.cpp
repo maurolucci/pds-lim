@@ -16,7 +16,6 @@ struct LazyFortCB : public GRBCallback {
   GRBModel &model;
   std::map<pds::Vertex, GRBVar> &s;
   std::map<Vertex, double> sValue;
-  std::set<Vertex> pmuSet;
   std::map<Edge, GRBVar> &w;
   std::map<Edge, double> wValue;
   std::map<Edge, GRBVar> y;
@@ -78,22 +77,38 @@ struct LazyFortCB : public GRBCallback {
     case GRB_CB_MIPSOL:
 
       // Recover variable values
-      pmuSet.clear();
       for (auto v : boost::make_iterator_range(vertices(graph))) {
         sValue[v] = getSolution(s.at(v));
         if (sValue[v] > 0.5)
-          pmuSet.insert(v);
         for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
           wValue[std::make_pair(v, u)] =
               getSolution(w.at(std::make_pair(v, u)));
       }
 
+      // Update solution
+      std::list<Vertex> turnedOn, turnedOff;
+      for (auto v : boost::make_iterator_range(vertices(graph))) {
+        if (getSolution(s.at(v)) < 0.5)
+          input.deactivate(v, turnedOff);
+        else {
+          std::set<Vertex> neighbors;
+          for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
+            if (getSolution(w.at(std::make_pair(v, u))) > 0.5);
+              neigbors.insert(u);
+          input.activate(v, neighbors, turnedOn, turnedOff);
+        }
+      }
+
+      // Apply propagation
+      propagate_from(turnedOn);
+
       // Feasibility check
-      VertexList mS = input.get_monitored_set(sValue, wValue);
-      if (!input.isFeasible(mS)) {
+      assert(input.check_get_monitored_set(sValue, wValue));
+      
+      if (!input.isFeasible()) {
 
         // Find violated cycles
-        std::set<Fort> forts = violatedForts(mS, lazyLimit);
+        std::set<Fort> forts = violatedForts(lazyLimit);
         std::pair<double, double> avg = addLazyForts(forts);
 
         // Report to callback file
@@ -109,57 +124,51 @@ struct LazyFortCB : public GRBCallback {
 
 private:
 
-  std::vector<std::set<Vertex>> observers;
-  std::map<Vertex, Vertex> propagates;
-  std::map<Vertex, Vertex> propagator;
-  PrecedenceDigraph digraph;
-
-  std::set<Fort> violatedForts(const VertexList &monitoredSet,
-                               size_t fortsLimit) {
+  std::set<Fort> violatedForts(size_t fortsLimit) {
 
     std::set<Fort> forts;
 
     // Get unmonitored set
-    VertexList unmonitoredSet;
-    boost::copy(vertices(graph) |
-                    boost::adaptors::filtered(
-                        [monitoredSet](auto v) { return !monitoredSet[v]; }),
-                std::back_inserter(unmonitoredSet));
+    std::vector<Vertex> unmonitoredSet;
+    input.get_unmonitored_set(unmonitoredSet);
 
     // Shuffle unmonitored set
     boost::range::random_shuffle(unmonitoredSet);
 
     // Preselect random neighbors for unmonitored vertices
+    std::map<Vertex, std::vector<Vertex>> neighbors; 
     for (Vertex v : unmonitoredSet) {
-      VertexList neighbors; 
+      neighbors[v] = std::vector<Vertex> ();
       boost::copy(adjacent_vertices(v, graph) |
                       boost::adaptors::filtered([unmonitoredSet](auto v) {
                         return boost::range::find(unmonitoredSet, v) !=
                                unmonitoredSet.end();
                       }),
-                  std::back_inserter(neighbors));
-      size_t k = std::min(neighbors.size(), n_channels - 1);
-      if (k < neighbors.size())
-        random_unique(neighbors.begin(), neighbors.end(), k);
-      for (size_t i = 0; i < k; ++i)
-        wValue.at(std::make_pair(v, neighbors[i])) = 1.0;      
+                  std::back_inserter(neighbors[v]));
+      size_t k = std::min(neighbors[v].size(), n_channels - 1);
+      if (k < neighbors[v].size()) {
+        neighbors[v].resize(k);
+        random_unique(neighbors[v].begin(), neighbors[v].end(), k);
+      }
     }
 
     // Initialize components
+    /*
     observers = std::vector<std::set<Vertex>> (num_vertices(graph), std::set<Vertex> ());
     propagates.clear();
     propagator.clear();
     digraph.clear();
     for (auto v : boost::make_iterator_range(vertices(graph)))
       add_vertex(LabelledVertex{.label = v}, digraph);
+    */
 
     // Copy of monitored set
-    VertexList mS (monitoredSet);
+    // VertexList mS (monitoredSet);
 
     // Activate all unmonitored vertices
     // (propagation is unnecessary here)
     for (Vertex v : unmonitoredSet)
-      (void) activate(v, mS);
+      activate(v, neighbors[v], std::list<Vertex> (), std::list<Vertex> ());
 
     // MINIMISE FEASIBLE SOLUTION
     for (Vertex v : unmonitoredSet) {
@@ -168,201 +177,41 @@ private:
         break;
 
       // Deactivate v
-      std::list<Vertex> changed = deactivate(v, mS);
-      
-      // Changed vertices can no longer propagate
-      std::set<Vertex> changed2 = despropagate(changed, mS);
+      std::list<Vertex> turnedOff;
+      deactivate(v, turnedOff);
 
       // Try propagations to changed vertices
-      propagate_to(changed2, mS);
+      propagate_to(turnedOff);
 
       // Feasibility check
       //VertexList mS2 = input.get_monitored_set(sValue, wValue);
       //std::cout << fmt::format("mS: {},\t mS2: {}\n", mS, mS2);
       //assert(mS == mS2);
-      if (!input.isFeasible(mS)) {
+      if (!input.isFeasible()) {
         
         // Find and insert fort
-        forts.insert(findFort(mS));
+        forts.insert(findFort(input));
 
         // Reactivate v
-        std::list<Vertex> changed3 = activate(v, mS);
-
-        // Changed vertices no longer need to be propagated
-        for (auto u: changed3)
-          (void) try_despropagate(u, mS);
+        std::list<Vertex> turnedOn;
+        activate(v, neighbors[v], turnedOn, std::list<Vertex> ());
 
         // Try propagations from changed vertices or their neighbors
-        std::list<Vertex> changed4; 
-        for (auto u: changed3) {
+        std::list<Vertex> candidates; 
+        for (auto u: turnedOn) { 
           if (input.isZeroInjection(u))
-            changed4.push_back(u);
+            candidates.push_back(u);
           for (auto y: boost::make_iterator_range(adjacent_vertices(u, graph)))
-            if (input.isZeroInjection(y) && mS[y])
-              changed4.push_back(y);
+            if (input.isZeroInjection(y) && input.isActivated(y))
+              candidates.push_back(y);
         }
-        propagate_from(changed4, mS);
+        propagate_from(candidates);
 
       }
 
     }
 
     return forts;
-  }
-
-  std::list<Vertex> activate(Vertex v, VertexList &monitoredSet) {
-    std::list<Vertex> changed; // Vertices that are no longer unmonitored
-    sValue.at(v) = 1.0;
-    if (observers[v].empty()) {
-      monitoredSet[v] = true;
-      changed.push_back(v);
-    }
-    observers[v].insert(v);
-    for (auto u: boost::make_iterator_range(adjacent_vertices(v, graph)))
-      if (wValue.at(std::make_pair(v,u)) > 0.5) {
-        if (observers[u].empty()) {
-          monitoredSet[u] = true;
-          changed.push_back(u);
-        }
-        observers[u].insert(v);
-      }
-    return changed;
-  }
-
-  std::list<Vertex> deactivate(Vertex v, VertexList &monitoredSet) {
-    std::list<Vertex> changed; // Vertices that are no longer monitored
-    // Deactivate v
-    sValue.at(v) = 0.0;
-    observers[v].erase(v);
-    if (observers[v].empty()) {
-      monitoredSet[v] = false;
-      changed.push_back(v);
-    }
-    // Deactivate neighbors of v
-    for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
-      if (wValue.at(std::make_pair(v, u)) > 0.5) {
-        observers[u].erase(v);
-        if (observers[u].empty()) {
-          monitoredSet[u] = false;
-          changed.push_back(u);
-        }
-      }
-    return changed;
-  }
-
-  bool try_propagation_to(Vertex v, VertexList &monitoredSet) {
-    for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
-      if (check_propagation(u, v, monitoredSet)) {
-        propagate(u, v, monitoredSet);
-        return true;
-      }
-    return false;
-  }
-
-  bool try_propagation_from(Vertex v, VertexList &monitoredSet) {
-    for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
-      if (check_propagation(v, u, monitoredSet)) {
-        propagate(v, u, monitoredSet);
-        return true;
-      }
-    return false;
-  }
-
-  bool check_propagation(Vertex from, Vertex to, VertexList &monitoredSet) {
-    if (monitoredSet[to] || !monitoredSet[from] || !input.isZeroInjection(from) || propagates.contains(from))
-      return false;
-    size_t count = boost::range::count_if(
-        adjacent_vertices(from, graph),
-        [monitoredSet, to](auto v) { return v != to && monitoredSet[v]; });
-    return (degree(from, graph) - count == 1);
-  }
-
-  void propagate_to(std::set<Vertex> &candidates, VertexList &monitoredSet) {
-    bool keepGoing = true;
-    while (keepGoing) {
-      keepGoing = false;
-      std::set<Vertex> propagated;
-      for (auto v : candidates) {
-        if (!try_propagation_to(v, monitoredSet))
-          continue;
-        keepGoing = true;
-        propagated.insert(v);
-        break;
-      }
-      for (auto v : propagated)
-        candidates.erase(v);
-    }
-  }
-
-  void propagate_from(std::list<Vertex> &candidates, VertexList &monitoredSet) {
-    while (!candidates.empty()) {
-      Vertex v = candidates.front();
-      candidates.pop_front();
-      if (!try_propagation_from(v, monitoredSet))
-        continue;
-      Vertex u = propagates[v];
-      if (input.isZeroInjection(u))
-        candidates.push_back(u);
-      for (auto y: boost::make_iterator_range(adjacent_vertices(u, graph)))
-        if (y != v && input.isZeroInjection(y) && monitoredSet[y])
-          candidates.push_back(y);
-    }
-  }
-
-  void propagate(Vertex from, Vertex to, VertexList &monitoredSet) {
-    monitoredSet[to] = true;
-    propagates[from] = to;
-    propagator[to] = from;
-    add_edge(from, to, digraph);
-    for (auto v : boost::make_iterator_range(adjacent_vertices(from, graph)))
-      if (v != to)
-        add_edge(v, to, digraph);
-  }
-
-  bool try_despropagate(Vertex v, VertexList &monitoredSet) {
-    if (propagator.contains(v)) {
-      despropagate(propagator[v], v, monitoredSet);
-      return true;
-    }
-    return false;
-  }
-
-  std::set<Vertex> despropagate(std::list<Vertex> &candidates, VertexList &monitoredSet) {
-    std::set<Vertex> changed;
-    while (!candidates.empty()) {
-      Vertex u = candidates.front();
-      candidates.pop_front();
-      changed.insert(u);
-
-      // u cannot propagate anymore
-      if (propagates.contains(u)) {
-        Vertex v = propagates[u];
-        despropagate(u, v, monitoredSet);
-        candidates.push_back(v);     
-      }
-
-      // u cannot be involved in a propagation
-      while (out_degree(u, digraph) > 0) {
-        auto e = *out_edges(u, digraph).first;
-        Vertex v = target(e, digraph);
-        // v can no longer be propagated
-        Vertex y = propagator[v];
-        despropagate(y, v, monitoredSet);
-        candidates.push_back(v);
-      }
-    }
-    return changed;
-  }
-
-  void despropagate(Vertex from, Vertex to, VertexList &monitoredSet) {
-    if (observers[to].empty())
-      monitoredSet[to] = false;
-    propagates.erase(from);
-    propagator.erase(to);
-    remove_edge(from, to, digraph);
-    for (auto y : boost::make_iterator_range(adjacent_vertices(from, graph)))
-      if (y != to)
-        remove_edge(y, to, digraph);
   }
 
   template <class bidiiter>
@@ -378,16 +227,16 @@ private:
     return begin;
   }
 
-  Fort findFort(const VertexList &monitoredSet) {
+  Fort findFort(Pds &input) {
     Fort fort;
     for (auto u : boost::make_iterator_range(vertices(graph))) {
-      if (monitoredSet[u])
+      if (input.isMonitored(u))
         continue;
       fort.first.insert(u);
       for (auto z : boost::make_iterator_range(adjacent_vertices(u, graph))) {
-        if (!monitoredSet[z])
+        if (!input.isMonitored(z))
           continue;
-        if (!pmuSet.contains(z))
+        if (!input.isActivated(z))
           fort.first.insert(z);
         else
           fort.second.insert(std::make_pair(z, u));
