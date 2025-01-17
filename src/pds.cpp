@@ -9,7 +9,7 @@ Pds::Pds(const pds::PowerGrid &graph, size_t n_channels)
 
 Pds::Pds(PowerGrid &&graph, size_t n_channels)
     : graph(graph), n_channels(n_channels),
-      activeList(num_vertices(graph), false),
+      activated(num_vertices(graph), false),
       monitoredSet(num_vertices(graph), false),
       observers(num_vertices(graph), std::set<Vertex> ()) {
     for (auto v : boost::make_iterator_range(vertices(graph)))
@@ -82,20 +82,22 @@ VertexList Pds::get_monitored_set(std::map<Vertex, double> &s,
   return monitored;
 }
 
-void Pds::activate(Vertex v, std::set<Vertex> &neighbors, 
+void Pds::activate(Vertex v, std::vector<Vertex> &neighbors, 
   std::list<Vertex> &turnedOn, std::list<Vertex> &turnedOff) {
   if (!activated[v]) {
     activated[v] = true;
     if (observers[v].empty()) {
       monitoredSet[v] = true;
       turnedOn.push_back(v);
-      despropagate_to(v);
+      observers[v].insert(v); // observe before despropagating
+      despropagate_to(v, turnedOff);
     }
-    observers[v].insert(v);
+    else
+      observers[v].insert(v);
   }
   for (auto u: boost::make_iterator_range(adjacent_vertices(v, graph))) {
-    if (neighbors.contains(u))
-      activate_neighbor(v, u, turnedOn);
+    if (std::find(neighbors.begin(), neighbors.end(), u) !=  neighbors.end())
+      activate_neighbor(v, u, turnedOn, turnedOff);
     else
       deactivate_neighbor(v, u, turnedOff);
   }
@@ -103,27 +105,29 @@ void Pds::activate(Vertex v, std::set<Vertex> &neighbors,
 
 void Pds::deactivate(Vertex v, std::list<Vertex> &turnedOff) {
   if (!activated[v])
-    continue;
+    return;
   activated[v] = false;
   observers[v].erase(v);
   if (observers[v].empty()) {
     monitoredSet[v] = false;
     turnedOff.push_back(v);
-    despropagate_from(v, turnedOff)
+    despropagate_from(v, turnedOff);
   }
   for (auto u: boost::make_iterator_range(adjacent_vertices(v, graph)))
     deactivate_neighbor(v, u, turnedOff);
 }
 
-void Pds::activate_neighbor(Vertex from, Vertex to, std::list<Vertex> &turnedOn) {
+void Pds::activate_neighbor(Vertex from, Vertex to, std::list<Vertex> &turnedOn, std::list<Vertex> &turnedOff) {
   if (observers[to].contains(from))
     return;
   if (observers[to].empty()) {
     monitoredSet[to] = true;
-    despropagate_to(to);
+    observers[to].insert(from); // observe before despropagating
+    despropagate_to(to, turnedOff);
     turnedOn.push_back(to);
   }
-  observers[to].insert(from);
+  else
+    observers[to].insert(from);
 }
 
 void Pds::deactivate_neighbor(Vertex from, Vertex to, std::list<Vertex> &turnedOff) {
@@ -132,7 +136,7 @@ void Pds::deactivate_neighbor(Vertex from, Vertex to, std::list<Vertex> &turnedO
   observers[to].erase(from);
   if (observers[to].empty()) {
     monitoredSet[to] = false;
-    turnedOff.push_back(v);
+    turnedOff.push_back(to);
     despropagate_from(to, turnedOff);
   }
 }
@@ -141,7 +145,7 @@ void Pds::despropagate_to(Vertex to, std::list<Vertex> &turnedOff) {
   auto it = propagator.find(to);
   if (it == propagator.end())
     return;
-  despropagate(*it, to, turnedOff)
+  despropagate(it->second, to, turnedOff);
 }
 
 void Pds::despropagate_from(Vertex v, std::list<Vertex> &turnedOff) {
@@ -202,28 +206,28 @@ bool Pds::try_propagation_from(Vertex v) {
 
 bool Pds::check_propagation(Vertex from, Vertex to) {
   if (monitoredSet[to] || !monitoredSet[from] 
-  || !input.isZeroInjection(from) || propagates.contains(from))
+  || !isZeroInjection(from) || propagates.contains(from))
     return false;
   size_t count = boost::range::count_if(
       adjacent_vertices(from, graph),
-      [monitoredSet, to](auto v) { return v != to && monitoredSet[v]; });
+      [this, to](auto v) { return v != to && monitoredSet[v]; });
   return (degree(from, graph) - count == 1);
 }
 
-void Pds::propagate_to(std::set<Vertex> &candidates) {
+void Pds::propagate_to(std::list<Vertex> &candidates) {
   bool keepGoing = true;
   while (keepGoing) {
     keepGoing = false;
     std::set<Vertex> propagated;
     for (auto v : candidates) {
-      if (!try_propagation_to(v, monitoredSet))
+      if (!try_propagation_to(v))
         continue;
       keepGoing = true;
       propagated.insert(v);
       break;
     }
     for (auto v : propagated)
-      candidates.erase(v);
+      candidates.remove(v);
   }
 }
 
@@ -231,13 +235,13 @@ void Pds::propagate_from(std::list<Vertex> &candidates) {
   while (!candidates.empty()) {
     Vertex v = candidates.front();
     candidates.pop_front();
-    if (!try_propagation_from(v, monitoredSet))
+    if (!try_propagation_from(v))
       continue;
     Vertex u = propagates[v];
-    if (input.isZeroInjection(u))
+    if (isZeroInjection(u))
       candidates.push_back(u);
     for (auto y: boost::make_iterator_range(adjacent_vertices(u, graph)))
-      if (y != v && input.isZeroInjection(y) && monitoredSet[y])
+      if (y != v && isZeroInjection(y) && monitoredSet[y])
         candidates.push_back(y);
   }
 }

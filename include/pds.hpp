@@ -6,6 +6,7 @@
 
 #include "boost/graph/adjacency_list.hpp"
 #include "boost/graph/graph_traits.hpp"
+#include "boost/range/adaptor/filtered.hpp"
 #include "boost/range/algorithm.hpp"
 
 namespace pds {
@@ -55,17 +56,17 @@ private:
   std::map<Vertex, Vertex> propagator;
   PrecedenceDigraph digraph;
 
-  void Pds::activate_neighbor(Vertex from, Vertex to, std::list<Vertex> &turnedOn);
-  void Pds::deactivate_neighbor(Vertex from, Vertex to, std::list<Vertex> &turnedOff);
+  void activate_neighbor(Vertex from, Vertex to, std::list<Vertex> &turnedOn, std::list<Vertex> &turnedOff);
+  void deactivate_neighbor(Vertex from, Vertex to, std::list<Vertex> &turnedOff);
 
-  void Pds::despropagate_to(Vertex to, std::list<Vertex> &turnedOff);
-  void Pds::despropagate_from(Vertex v, std::list<Vertex> &turnedOff);
-  void Pds::despropagate(Vertex from, Vertex to, std::list<Vertex> &turnedOff);
+  void despropagate_to(Vertex to, std::list<Vertex> &turnedOff);
+  void despropagate_from(Vertex v, std::list<Vertex> &turnedOff);
+  void despropagate(Vertex from, Vertex to, std::list<Vertex> &turnedOff);
 
-  bool Pds::try_propagation_to(Vertex v);
-  bool Pds::try_propagation_from(Vertex v);
-  bool Pds::check_propagation(Vertex from, Vertex to);
-  void Pds::propagate(Vertex from, Vertex to);
+  [[nodiscard]] bool try_propagation_to(Vertex v);
+  [[nodiscard]] bool try_propagation_from(Vertex v);
+  [[nodiscard]] bool check_propagation(Vertex from, Vertex to);
+  void propagate(Vertex from, Vertex to);
 
 public:
   Pds();
@@ -75,8 +76,7 @@ public:
   [[nodiscard]] inline const PowerGrid &get_graph() const { return graph; }
   [[nodiscard]] inline size_t get_n_channels() const { return n_channels; }
 
-  [[nodiscard]] inline bool
-  isZeroInjection(Vertex v) const {
+  [[nodiscard]] inline bool isZeroInjection(Vertex v) const {
     return graph[v].zero_injection;
   }
 
@@ -96,10 +96,10 @@ public:
   VertexList get_monitored_set(std::map<Vertex, double> &s,
                                std::map<Edge, double> &w);
 
-  [[nodiscard]] inline void get_unmonitored_set(std::vector<Vertex> &vec) const {
+  inline void get_unmonitored_set(std::vector<Vertex> &vec) const {
     boost::copy(vertices(graph) |
                     boost::adaptors::filtered(
-                        [monitoredSet](auto v) { return !monitoredSet[v]; }),
+                        [this](auto v) { return !monitoredSet[v]; }),
                 std::back_inserter(vec));
   }
 
@@ -110,19 +110,19 @@ public:
   }
 
   [[nodiscard]] inline bool isFeasible() const {
-    return boost::range::count_if(vertices(graph), [monitoredSet](auto u) {
+    return boost::range::count_if(vertices(graph), [this](auto u) {
              return monitoredSet[u];
            }) == static_cast<std::ptrdiff_t>(boost::num_vertices(graph));
   }
 
-  void Pds::activate(Vertex v, std::set<Vertex> &neighbors, 
+  void activate(Vertex v, std::vector<Vertex> &neighbors, 
     std::list<Vertex> &turnedOn, std::list<Vertex> &turnedOff);
-  void Pds::deactivate(Vertex v, std::list<Vertex> &turnedOff);
+  void deactivate(Vertex v, std::list<Vertex> &turnedOff);
 
-  void Pds::propagate_to(std::set<Vertex> &candidates);
-  void Pds::propagate_from(std::list<Vertex> &candidates);
+  void propagate_to(std::list<Vertex> &candidates);
+  void propagate_from(std::list<Vertex> &candidates);
 
-  bool check_get_monitored_set(std::map<Vertex, double> &s,
+  [[nodiscard]] bool check_get_monitored_set(std::map<Vertex, double> &s,
                                std::map<Edge, double> &w);
 
 }; // end of class Pds

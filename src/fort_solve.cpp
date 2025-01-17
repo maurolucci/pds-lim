@@ -91,16 +91,16 @@ struct LazyFortCB : public GRBCallback {
         if (getSolution(s.at(v)) < 0.5)
           input.deactivate(v, turnedOff);
         else {
-          std::set<Vertex> neighbors;
+          std::vector<Vertex> neighbors;
           for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
-            if (getSolution(w.at(std::make_pair(v, u))) > 0.5);
-              neigbors.insert(u);
+            if (getSolution(w.at(std::make_pair(v, u))) > 0.5)
+              neighbors.push_back(u);
           input.activate(v, neighbors, turnedOn, turnedOff);
         }
       }
 
       // Apply propagation
-      propagate_from(turnedOn);
+      input.propagate_from(turnedOn);
 
       // Feasibility check
       assert(input.check_get_monitored_set(sValue, wValue));
@@ -167,8 +167,9 @@ private:
 
     // Activate all unmonitored vertices
     // (propagation is unnecessary here)
+    std::list<Vertex> trash;
     for (Vertex v : unmonitoredSet)
-      activate(v, neighbors[v], std::list<Vertex> (), std::list<Vertex> ());
+      input.activate(v, neighbors[v], trash, trash);
 
     // MINIMISE FEASIBLE SOLUTION
     for (Vertex v : unmonitoredSet) {
@@ -178,10 +179,10 @@ private:
 
       // Deactivate v
       std::list<Vertex> turnedOff;
-      deactivate(v, turnedOff);
+      input.deactivate(v, turnedOff);
 
       // Try propagations to changed vertices
-      propagate_to(turnedOff);
+      input.propagate_to(turnedOff);
 
       // Feasibility check
       //VertexList mS2 = input.get_monitored_set(sValue, wValue);
@@ -194,7 +195,7 @@ private:
 
         // Reactivate v
         std::list<Vertex> turnedOn;
-        activate(v, neighbors[v], turnedOn, std::list<Vertex> ());
+        input.activate(v, neighbors[v], turnedOn, trash);
 
         // Try propagations from changed vertices or their neighbors
         std::list<Vertex> candidates; 
@@ -205,7 +206,7 @@ private:
             if (input.isZeroInjection(y) && input.isActivated(y))
               candidates.push_back(y);
         }
-        propagate_from(candidates);
+        input.propagate_from(candidates);
 
       }
 
