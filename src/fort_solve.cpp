@@ -88,16 +88,15 @@ struct LazyFortCB : public GRBCallback {
       // Update solution
 
       // First deactivate vertices
-      std::list<Vertex> turnedOff;
+      std::list<Vertex> turnedOff, turnedOn;
       for (auto v : boost::make_iterator_range(vertices(graph)))
         if (getSolution(s.at(v)) < 0.5)
           input.deactivate(v, turnedOff);
       // Try propagation to turned off vertices
-      input.propagate_to(turnedOff);
+      input.propagate_to(turnedOff, turnedOn);
 
       // Second activate vertices
       turnedOff.clear();
-      std::list<Vertex> turnedOn;
       for (auto v : boost::make_iterator_range(vertices(graph)))
         if (getSolution(s.at(v)) > 0.5) {
           std::vector<Vertex> neighbors;
