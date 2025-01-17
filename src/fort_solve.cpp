@@ -107,7 +107,7 @@ struct LazyFortCB : public GRBCallback {
           input.activate(v, neighbors, turnedOn, turnedOff);
         }
       // Try propagation to turned off vertices
-      input.propagate_to(turnedOff);
+      input.propagate_to(turnedOff, turnedOn);
       // Try propagation from turned on vertices or their neighbors
       std::list<Vertex> candidates; 
       for (auto u: turnedOn) { 
@@ -117,7 +117,7 @@ struct LazyFortCB : public GRBCallback {
           if (input.isZeroInjection(y) && input.isActivated(y))
             candidates.push_back(y);
       }
-      input.propagate_from(candidates);
+      input.propagate_from(candidates, turnedOn);
 
       // Feasibility check
       assert(input.check_get_monitored_set(sValue, wValue));
@@ -202,7 +202,7 @@ private:
       newSolution.deactivate(v, turnedOff);
 
       // Try propagations to changed vertices
-      newSolution.propagate_to(turnedOff);
+      newSolution.propagate_to(turnedOff, trash);
 
       // Feasibility check
       //VertexList mS2 = input.get_monitored_set(sValue, wValue);
@@ -226,7 +226,7 @@ private:
             if (newSolution.isZeroInjection(y) && newSolution.isActivated(y))
               candidates.push_back(y);
         }
-        newSolution.propagate_from(candidates);
+        newSolution.propagate_from(candidates, trash);
 
       }
 

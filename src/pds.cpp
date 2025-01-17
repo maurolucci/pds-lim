@@ -187,19 +187,19 @@ void Pds::despropagate(Vertex from, Vertex to, std::list<Vertex> &turnedOff) {
       remove_edge(y, to, digraph);
 }
 
-bool Pds::try_propagation_to(Vertex v) {
+bool Pds::try_propagation_to(Vertex v, std::list<Vertex> &turnedOn) {
   for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
     if (check_propagation(u, v)) {
-      propagate(u, v);
+      propagate(u, v, turnedOn);
       return true;
     }
   return false;
 }
 
-bool Pds::try_propagation_from(Vertex v) {
+bool Pds::try_propagation_from(Vertex v, std::list<Vertex> &turnedOn) {
   for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
     if (check_propagation(v, u)) {
-      propagate(v, u);
+      propagate(v, u, turnedOn);
       return true;
     }
   return false;
@@ -215,13 +215,13 @@ bool Pds::check_propagation(Vertex from, Vertex to) {
   return (degree(from, graph) - count == 1);
 }
 
-void Pds::propagate_to(std::list<Vertex> &candidates) {
+void Pds::propagate_to(std::list<Vertex> &candidates, std::list<Vertex> &turnedOn) {
   bool keepGoing = true;
   while (keepGoing) {
     keepGoing = false;
     std::set<Vertex> propagated;
     for (auto v : candidates) {
-      if (!try_propagation_to(v))
+      if (!try_propagation_to(v, turnedOn))
         continue;
       keepGoing = true;
       propagated.insert(v);
@@ -232,11 +232,11 @@ void Pds::propagate_to(std::list<Vertex> &candidates) {
   }
 }
 
-void Pds::propagate_from(std::list<Vertex> &candidates) {
+void Pds::propagate_from(std::list<Vertex> &candidates, std::list<Vertex> &turnedOn) {
   while (!candidates.empty()) {
     Vertex v = candidates.front();
     candidates.pop_front();
-    if (!try_propagation_from(v))
+    if (!try_propagation_from(v, turnedOn))
       continue;
     Vertex u = propagates[v];
     if (isZeroInjection(u))
@@ -247,8 +247,9 @@ void Pds::propagate_from(std::list<Vertex> &candidates) {
   }
 }
 
-void Pds::propagate(Vertex from, Vertex to) {
+void Pds::propagate(Vertex from, Vertex to, std::list<Vertex> &turnedOn) {
   monitoredSet[to] = true;
+  turnedOn.push_back(to);
   propagates[from] = to;
   propagator[to] = from;
   add_edge(from, to, digraph);
