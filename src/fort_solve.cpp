@@ -87,20 +87,34 @@ struct LazyFortCB : public GRBCallback {
 
       // Update solution
       std::list<Vertex> turnedOn, turnedOff;
-      for (auto v : boost::make_iterator_range(vertices(graph))) {
+      // First: turn off
+      for (auto v : boost::make_iterator_range(vertices(graph)))
         if (getSolution(s.at(v)) < 0.5)
           input.deactivate(v, turnedOff);
-        else {
+      // Second: turn on
+      for (auto v : boost::make_iterator_range(vertices(graph)))
+        if (getSolution(s.at(v)) > 0.5) {
           std::vector<Vertex> neighbors;
           for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
             if (getSolution(w.at(std::make_pair(v, u))) > 0.5)
               neighbors.push_back(u);
           input.activate(v, neighbors, turnedOn, turnedOff);
         }
-      }
 
       // Apply propagation
-      input.propagate_from(turnedOn);
+      if (!turnedOn.empty) {
+        std::list<Vertex> candidates; 
+        for (auto u: turnedOn) { 
+          if (input.isZeroInjection(u))
+            candidates.push_back(u);
+          for (auto y: boost::make_iterator_range(adjacent_vertices(u, graph)))
+            if (input.isZeroInjection(y) && input.isActivated(y))
+              candidates.push_back(y);
+        }
+        input.propagate_from(candidates);
+      }
+      else if (!turnedOff.empty())
+        input.propagate_to(turnedOff);
 
       // Feasibility check
       assert(input.check_get_monitored_set(sValue, wValue));
@@ -128,9 +142,12 @@ private:
 
     std::set<Fort> forts;
 
+    // Copy solution
+    Pds newSolution (input);
+
     // Get unmonitored set
     std::vector<Vertex> unmonitoredSet;
-    input.get_unmonitored_set(unmonitoredSet);
+    newSolution.get_unmonitored_set(unmonitoredSet);
 
     // Shuffle unmonitored set
     boost::range::random_shuffle(unmonitoredSet);
@@ -169,7 +186,7 @@ private:
     // (propagation is unnecessary here)
     std::list<Vertex> trash;
     for (Vertex v : unmonitoredSet)
-      input.activate(v, neighbors[v], trash, trash);
+      newSolution.activate(v, neighbors[v], trash, trash);
 
     // MINIMISE FEASIBLE SOLUTION
     for (Vertex v : unmonitoredSet) {
@@ -179,34 +196,34 @@ private:
 
       // Deactivate v
       std::list<Vertex> turnedOff;
-      input.deactivate(v, turnedOff);
+      newSolution.deactivate(v, turnedOff);
 
       // Try propagations to changed vertices
-      input.propagate_to(turnedOff);
+      newSolution.propagate_to(turnedOff);
 
       // Feasibility check
       //VertexList mS2 = input.get_monitored_set(sValue, wValue);
       //std::cout << fmt::format("mS: {},\t mS2: {}\n", mS, mS2);
       //assert(mS == mS2);
-      if (!input.isFeasible()) {
+      if (!newSolution.isFeasible()) {
         
         // Find and insert fort
-        forts.insert(findFort(input));
+        forts.insert(findFort(newSolution));
 
         // Reactivate v
         std::list<Vertex> turnedOn;
-        input.activate(v, neighbors[v], turnedOn, trash);
+        newSolution.activate(v, neighbors[v], turnedOn, trash);
 
         // Try propagations from changed vertices or their neighbors
         std::list<Vertex> candidates; 
         for (auto u: turnedOn) { 
-          if (input.isZeroInjection(u))
+          if (newSolution.isZeroInjection(u))
             candidates.push_back(u);
           for (auto y: boost::make_iterator_range(adjacent_vertices(u, graph)))
-            if (input.isZeroInjection(y) && input.isActivated(y))
+            if (newSolution.isZeroInjection(y) && newSolution.isActivated(y))
               candidates.push_back(y);
         }
-        input.propagate_from(candidates);
+        newSolution.propagate_from(candidates);
 
       }
 
