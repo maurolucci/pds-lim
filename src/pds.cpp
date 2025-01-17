@@ -258,7 +258,10 @@ void Pds::propagate(Vertex from, Vertex to) {
 
 bool Pds::check_get_monitored_set(std::map<Vertex, double> &s,
                                   std::map<Edge, double> &w) {
+  std::cout << fmt::format("Activated: {}\n", activated);
+  std::cout << fmt::format("New: {}\n", monitoredSet);
   VertexList mS = get_monitored_set(s, w);
+  std::cout << fmt::format("Old: {}\n", mS);
   return (mS == monitoredSet);
 }
 

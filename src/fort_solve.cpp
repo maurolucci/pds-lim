@@ -86,12 +86,16 @@ struct LazyFortCB : public GRBCallback {
       }
 
       // Update solution
-      std::list<Vertex> turnedOn, turnedOff;
-      // First: turn off
+
+      // First deactivate vertices
+      std::list<Vertex> turnedOff;
       for (auto v : boost::make_iterator_range(vertices(graph)))
         if (getSolution(s.at(v)) < 0.5)
           input.deactivate(v, turnedOff);
-      // Second: turn on
+      // Try propagation to turned off vertices
+      input.propagate_to(turnedOff);
+
+      // Second activate vertices
       for (auto v : boost::make_iterator_range(vertices(graph)))
         if (getSolution(s.at(v)) > 0.5) {
           std::vector<Vertex> neighbors;
@@ -100,21 +104,16 @@ struct LazyFortCB : public GRBCallback {
               neighbors.push_back(u);
           input.activate(v, neighbors, turnedOn, turnedOff);
         }
-
-      // Apply propagation
-      if (!turnedOn.empty()) {
-        std::list<Vertex> candidates; 
-        for (auto u: turnedOn) { 
-          if (input.isZeroInjection(u))
-            candidates.push_back(u);
-          for (auto y: boost::make_iterator_range(adjacent_vertices(u, graph)))
-            if (input.isZeroInjection(y) && input.isActivated(y))
-              candidates.push_back(y);
-        }
-        input.propagate_from(candidates);
+      // Try propagation from turned on vertices or their neighbors
+      std::list<Vertex> candidates; 
+      for (auto u: turnedOn) { 
+        if (input.isZeroInjection(u))
+          candidates.push_back(u);
+        for (auto y: boost::make_iterator_range(adjacent_vertices(u, graph)))
+          if (input.isZeroInjection(y) && input.isActivated(y))
+            candidates.push_back(y);
       }
-      else if (!turnedOff.empty())
-        input.propagate_to(turnedOff);
+      input.propagate_from(candidates)
 
       // Feasibility check
       assert(input.check_get_monitored_set(sValue, wValue));
