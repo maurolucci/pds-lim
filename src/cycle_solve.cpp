@@ -19,11 +19,18 @@ struct LazyCycleCB : public GRBCallback {
   std::ostream &cbFile, &solFile;
   size_t lazyLimit;
 
+  size_t &totalCallback;
+  size_t &totalCallbackTime;
+  size_t &totalLazy;
+
   LazyCycleCB(Pds &input, std::ostream &callbackFile,
               std::ostream &solutionFile, size_t lzLimit)
       : mipmodel(), model(*mipmodel.model), s(mipmodel.s), w(mipmodel.w), y(),
         input(input), graph(input.get_graph()), cbFile(callbackFile),
-        solFile(solutionFile), lazyLimit(lzLimit) {
+        solFile(solutionFile), lazyLimit(lzLimit),
+        totalCallback(mipmodel.totalCallback), 
+        totalCallbackTime(mipmodel.totalCallbackTime),
+        totalLazy(mipmodel.totalLazy) {
 
     size_t n_channels = input.get_n_channels();
 
@@ -106,6 +113,9 @@ struct LazyCycleCB : public GRBCallback {
     // incumbent)
     case GRB_CB_MIPSOL:
 
+      auto t0 = std::chrono::high_resolution_clock::now();
+      totalCallback++;
+
       // Update solution
 
       // First deactivate vertices
@@ -146,6 +156,7 @@ struct LazyCycleCB : public GRBCallback {
         PrecedenceDigraph digraph = build_precedence_digraph();
         std::set<VertexList> cycles = violatedCycles(digraph, lazyLimit);
         std::pair<double, double> avg = addLazyCycles(cycles);
+        totalLazy += cycles.size();
 
         // Report to callback file
         cbFile << fmt::format(
@@ -153,6 +164,9 @@ struct LazyCycleCB : public GRBCallback {
                       cycles.size(), avg.first, avg.second)
                << std::endl;
       }
+
+      auto t1 = std::chrono::high_resolution_clock::now();
+      totalCallbackTime += std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
 
       break;
     }
