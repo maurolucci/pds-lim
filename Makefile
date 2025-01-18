@@ -14,7 +14,7 @@ FLAGS = -Wall -Wextra -O3
 
 all: deps pds-lim
 
-pds-lim: main.cpp pds.o graphio.o gurobi_solve.o cycle_solve.o fort_solve.o $(DEPS)
+pds-lim: main.cpp pds.o graphio.o gurobi_solve.o cycle_solve.o fort_solve.o $(INCPATH)/gurobi_common.hpp $(DEPS)
 	$(CC) -o $@ $^ $(INCS) $(LIBS) $(FLAGS)
 
 deps:
