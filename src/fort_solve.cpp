@@ -142,7 +142,7 @@ struct LazyFortCB : public GRBCallback {
                               "# forts: {}",
                               totalCallback, totalCallbackTime, totalLazy)
                << std::endl;
-        cbFile << totalCallback << "," << totalCallbackTime << "," << totalLazy <<
+        cbFile << totalCallback << "," << totalCallbackTime << "," << totalLazy
                << std::endl;
 
       }
