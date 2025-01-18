@@ -1,6 +1,7 @@
 #include "cycle_solve.hpp"
 #include "fort_solve.hpp"
 #include "graphio.hpp"
+#include "gurobi_common.hpp"
 #include "gurobi_solve.hpp"
 #include "pds.hpp"
 
