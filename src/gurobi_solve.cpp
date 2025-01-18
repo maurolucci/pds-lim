@@ -4,7 +4,9 @@
 
 namespace pds {
 
-auto now() { return std::chrono::high_resolution_clock::now(); }
+std::chrono::time_point<std::chrono::high_resolution_clock> now() { 
+  return std::chrono::high_resolution_clock::now(); 
+}
 template <typename T> auto µs(T time) {
   return std::chrono::duration_cast<std::chrono::microseconds>(time).count();
 }
