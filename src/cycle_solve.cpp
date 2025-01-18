@@ -67,7 +67,7 @@ struct LazyCycleCB : public GRBCallback {
            boost::make_iterator_range(boost::adjacent_vertices(v, graph))) {
         constr3 += w.at(std::make_pair(v, u));
       }
-      model.addConstr(constr3 <=
+      model.addConstr(constr3 ==
                       std::min(boost::degree(v, graph), (n_channels - 1)) *
                           s.at(v));
     }

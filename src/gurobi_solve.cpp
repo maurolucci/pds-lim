@@ -146,7 +146,7 @@ MIPModel brimkovModel(Pds &input) {
     GRBLinExpr constr3 = 0;
     for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
       constr3 += w.at(std::make_pair(v, u));
-    model.addConstr(constr3 <=
+    model.addConstr(constr3 ==
                     std::min(degree(v, graph), (n_channels - 1)) * s.at(v));
   }
 
