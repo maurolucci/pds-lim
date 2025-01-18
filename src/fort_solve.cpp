@@ -123,6 +123,7 @@ struct LazyFortCB : public GRBCallback {
         // Find violated cycles
         std::set<Fort> forts = violatedForts(lazyLimit);
         std::pair<double, double> avg = addLazyForts(forts);
+        totalLazy += forts.size();
 
         // Report to callback file
         cbFile << fmt::format("# forts: {}, avg. vertex size: {:.2f}, avg. "
@@ -133,7 +134,6 @@ struct LazyFortCB : public GRBCallback {
 
       auto t1 = std::chrono::high_resolution_clock::now();
       totalCallbackTime += std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
-      totalLazy += forts.size();
 
       break;
     }
