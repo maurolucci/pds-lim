@@ -230,7 +230,7 @@ int main(int argc, const char **argv) {
           "lower_bound"_a = result.lower, "upper_bound"_a = result.upper,
           "gap"_a = result.gap, "result"_a = format_solve_state(result.state),
           "nodes"_a = result.nodes, 
-          "t_solver"_a = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count()
+          "t_solver"_a = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count(),
           "callback"_a = result.totalCallback,
           "t_callback"_a = result.totalCallbackTime,
           "lazy"_a = result.totalLazy));
