@@ -1,6 +1,7 @@
 #ifndef GUROBI_COMMON_HPP
 #define GUROBI_COMMON_HPP
 
+#include <chrono>
 #include <iostream>
 #include <map>
 
