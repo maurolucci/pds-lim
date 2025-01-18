@@ -7,6 +7,7 @@
 
 #include <boost/optional.hpp>
 #include <boost/program_options.hpp>
+#include <chrono>
 #include <filesystem>
 #include <fmt/format.h>
 #include <fstream>
@@ -195,7 +196,7 @@ int main(int argc, const char **argv) {
                                            : outPut();
 
       // Solve
-      auto t0 = now();
+      auto t0 = std::chrono::high_resolution_clock::now();;
       SolveResult result;
       std::string solverName = vm["solver"].as<std::string>();
       try {
@@ -214,7 +215,7 @@ int main(int argc, const char **argv) {
                    ex.getMessage());
         throw ex;
       }
-      auto t1 = now();
+      auto t1 = std::chrono::high_resolution_clock::now();;
 
       // Write stats
       using namespace fmt::literals;
@@ -228,7 +229,8 @@ int main(int argc, const char **argv) {
           "constraints"_a = result.constraints, "run"_a = run,
           "lower_bound"_a = result.lower, "upper_bound"_a = result.upper,
           "gap"_a = result.gap, "result"_a = format_solve_state(result.state),
-          "nodes"_a = result.nodes, "t_solver"_a = µs(t1 - t0)));
+          "nodes"_a = result.nodes, 
+          "t_solver"_a = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count()));
       if (vm.count("outdir")) {
         std::ofstream statFile(outDirs["stat"], std::ofstream::out);
         statFile << stats;

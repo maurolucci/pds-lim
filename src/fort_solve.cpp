@@ -2,6 +2,7 @@
 #include "gurobi_common.hpp"
 
 #include <boost/range/adaptor/filtered.hpp>
+#include <chrono>
 #include <gurobi_c++.h>
 
 namespace pds {
@@ -79,7 +80,7 @@ struct LazyFortCB : public GRBCallback {
     // incumbent)
     case GRB_CB_MIPSOL:
 
-      auto t0 = now();
+      auto t0 = std::chrono::high_resolution_clock::now();
       totalCallback++;
 
       // Update solution
@@ -122,8 +123,8 @@ struct LazyFortCB : public GRBCallback {
         std::set<Fort> forts = violatedForts(lazyLimit);
         std::pair<double, double> avg = addLazyForts(forts);
 
-        auto t1 = now();
-        totalCallbackTime += µs(t1 - t0);
+        auto t1 = std::chrono::high_resolution_clock::now();
+        totalCallbackTime += std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
         totalLazy += forts.size();
 
         // Report to callback file
@@ -134,8 +135,8 @@ struct LazyFortCB : public GRBCallback {
       }
       else {
 
-        auto t1 = now();
-        totalCallbackTime += µs(t1 - t0);
+        auto t1 = std::chrono::high_resolution_clock::now();
+        totalCallbackTime += std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
 
         // Report to callback file
         cbFile << fmt::format("# callbacks: {}, duration: {}, "
