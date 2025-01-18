@@ -138,7 +138,7 @@ struct LazyFortCB : public GRBCallback {
         totalCallbackTime += µs(t1 - t0);
 
         // Report to callback file
-        cbFile << fmt::format("# callbacks: {}, duration: {:.2f}, "
+        cbFile << fmt::format("# callbacks: {}, duration: {}, "
                               "# forts: {}",
                               totalCallback, totalCallbackTime, totalLazy)
                << std::endl;
