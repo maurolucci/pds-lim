@@ -4,13 +4,6 @@
 
 namespace pds {
 
-std::chrono::time_point<std::chrono::high_resolution_clock> now() { 
-  return std::chrono::high_resolution_clock::now(); 
-}
-template <typename T> auto µs(T time) {
-  return std::chrono::duration_cast<std::chrono::microseconds>(time).count();
-}
-
 GRBEnv &getEnv() {
   static thread_local GRBEnv env;
   return env;

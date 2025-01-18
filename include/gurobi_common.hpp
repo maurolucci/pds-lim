@@ -9,8 +9,12 @@
 
 namespace pds {
 
-std::chrono::time_point<std::chrono::high_resolution_clock> now();
-template <typename T> auto µs(T time);
+auto now() { 
+  return std::chrono::high_resolution_clock::now(); 
+}
+template <typename T> auto µs(T time) {
+  return std::chrono::duration_cast<std::chrono::microseconds>(time).count();
+}
 
 struct MIPModel {
   std::unique_ptr<GRBModel> model;
