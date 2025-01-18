@@ -9,6 +9,9 @@
 
 namespace pds {
 
+auto now();
+template <typename T> auto µs(T time);
+
 struct MIPModel {
   std::unique_ptr<GRBModel> model;
   std::map<Vertex, GRBVar> s;

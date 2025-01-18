@@ -33,7 +33,7 @@ struct LazyFortCB : public GRBCallback {
       : mipmodel(), model(*mipmodel.model), s(mipmodel.s), w(mipmodel.w), y(),
         input(input), graph(input.get_graph()), cbFile(callbackFile),
         solFile(solutionFile), n_channels(input.get_n_channels()),
-        lazyLimit(lzLimit), totalCallbacks(0), totalCallbackTime(0),
+        lazyLimit(lzLimit), totalCallback(0), totalCallbackTime(0),
         totalLazy(0) {
 
     model.setCallback(this);

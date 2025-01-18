@@ -6,7 +6,6 @@
 
 #include <boost/optional.hpp>
 #include <boost/program_options.hpp>
-#include <chrono>
 #include <filesystem>
 #include <fmt/format.h>
 #include <fstream>
