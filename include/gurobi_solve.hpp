@@ -8,6 +8,9 @@
 
 namespace pds {
 
+auto now();
+template <typename T> auto µs(T time);
+
 MIPModel brimkovModel(Pds &input);
 
 SolveResult solveMIP(const Pds &input, MIPModel &model,

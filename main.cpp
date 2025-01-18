@@ -58,12 +58,6 @@ std::string format_solve_state(SolveState state) {
   return name;
 }
 
-auto now() { return std::chrono::high_resolution_clock::now(); }
-
-template <typename T> auto µs(T time) {
-  return std::chrono::duration_cast<std::chrono::microseconds>(time).count();
-}
-
 auto getModel(const std::string &name) {
   if (name == "brimkov") {
     return brimkovModel;

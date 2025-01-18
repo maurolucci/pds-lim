@@ -4,6 +4,11 @@
 
 namespace pds {
 
+auto now() { return std::chrono::high_resolution_clock::now(); }
+template <typename T> auto µs(T time) {
+  return std::chrono::duration_cast<std::chrono::microseconds>(time).count();
+}
+
 GRBEnv &getEnv() {
   static thread_local GRBEnv env;
   return env;
@@ -38,13 +43,13 @@ SolveResult solveMIP(Pds &input, MIPModel &mipmodel,
     result.state = SolveState::Infeasible;
     break;
   case GRB_OPTIMAL:
-    result.lower = model.get(GRB_DoubleAttr_ObjBound);
-    result.upper = model.get(GRB_DoubleAttr_ObjVal);
+    result.lower = static_cast<size_t>(model.get(GRB_DoubleAttr_ObjBound));
+    result.upper = static_cast<size_t>(model.get(GRB_DoubleAttr_ObjVal));
     result.state = SolveState::Optimal;
     break;
   case GRB_TIME_LIMIT:
     result.lower = model.get(GRB_DoubleAttr_ObjBound);
-    result.upper = model.get(GRB_DoubleAttr_ObjVal);
+    result.upper = static_cast<size_t>(model.get(GRB_DoubleAttr_ObjVal));
     result.state = SolveState::Timeout;
     break;
   }

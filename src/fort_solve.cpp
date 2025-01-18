@@ -2,6 +2,7 @@
 #include "gurobi_common.hpp"
 
 #include <boost/range/adaptor/filtered.hpp>
+#include <chrono>
 #include <gurobi_c++.h>
 
 namespace pds {
@@ -24,12 +25,17 @@ struct LazyFortCB : public GRBCallback {
   size_t n_channels;
   size_t lazyLimit;
 
+  size_t totalCallback;
+  size_t totalCallbackTime;
+  size_t totalLazy;
+
   LazyFortCB(Pds &input, std::ostream &callbackFile, std::ostream &solutionFile,
              size_t lzLimit)
       : mipmodel(), model(*mipmodel.model), s(mipmodel.s), w(mipmodel.w), y(),
         input(input), graph(input.get_graph()), cbFile(callbackFile),
         solFile(solutionFile), n_channels(input.get_n_channels()),
-        lazyLimit(lzLimit) {
+        lazyLimit(lzLimit), totalCallbacks(0), totalCallbackTime(0),
+        totalLazy(0) {
 
     model.setCallback(this);
 
@@ -74,6 +80,9 @@ struct LazyFortCB : public GRBCallback {
     // incumbent)
     case GRB_CB_MIPSOL:
 
+      auto t0 = now();
+      totalCallback++;
+
       // Update solution
 
       // First deactivate vertices
@@ -114,11 +123,29 @@ struct LazyFortCB : public GRBCallback {
         std::set<Fort> forts = violatedForts(lazyLimit);
         std::pair<double, double> avg = addLazyForts(forts);
 
+        auto t1 = now();
+        totalCallbackTime += µs(t1 - t0);
+        totalLazy += forts.size();
+
         // Report to callback file
         cbFile << fmt::format("# forts: {}, avg. vertex size: {:.2f}, avg. "
                               "edge size: {:.2f}",
                               forts.size(), avg.first, avg.second)
                << std::endl;
+      }
+      else {
+
+        auto t1 = now();
+        totalCallbackTime += µs(t1 - t0);
+
+        // Report to callback file
+        cbFile << fmt::format("# callbacks: {}, duration: {:.2f}, "
+                              "# forts: {}",
+                              totalCallback, totalCallbackTime, totalLazy)
+               << std::endl;
+        cbFile << totalCallback << "," << totalCallbackTime << "," << totalLazy <<
+               << std::endl;
+
       }
 
       break;
