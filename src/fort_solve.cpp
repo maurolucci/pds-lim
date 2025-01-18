@@ -25,17 +25,18 @@ struct LazyFortCB : public GRBCallback {
   size_t n_channels;
   size_t lazyLimit;
 
-  size_t totalCallback;
-  size_t totalCallbackTime;
-  size_t totalLazy;
+  size_t &totalCallback;
+  size_t &totalCallbackTime;
+  size_t &totalLazy;
 
   LazyFortCB(Pds &input, std::ostream &callbackFile, std::ostream &solutionFile,
              size_t lzLimit)
       : mipmodel(), model(*mipmodel.model), s(mipmodel.s), w(mipmodel.w), y(),
         input(input), graph(input.get_graph()), cbFile(callbackFile),
         solFile(solutionFile), n_channels(input.get_n_channels()),
-        lazyLimit(lzLimit), totalCallback(0), totalCallbackTime(0),
-        totalLazy(0) {
+        lazyLimit(lzLimit), totalCallback(mipmodel.totalCallback), 
+        totalCallbackTime(mipmodel.totalCallbackTime),
+        totalLazy(mipmodel.totalLazy) {
 
     model.setCallback(this);
 
@@ -123,30 +124,16 @@ struct LazyFortCB : public GRBCallback {
         std::set<Fort> forts = violatedForts(lazyLimit);
         std::pair<double, double> avg = addLazyForts(forts);
 
-        auto t1 = std::chrono::high_resolution_clock::now();
-        totalCallbackTime += std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
-        totalLazy += forts.size();
-
         // Report to callback file
         cbFile << fmt::format("# forts: {}, avg. vertex size: {:.2f}, avg. "
                               "edge size: {:.2f}",
                               forts.size(), avg.first, avg.second)
                << std::endl;
       }
-      else {
 
-        auto t1 = std::chrono::high_resolution_clock::now();
-        totalCallbackTime += std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
-
-        // Report to callback file
-        cbFile << fmt::format("# callbacks: {}, duration: {}, "
-                              "# forts: {}",
-                              totalCallback, totalCallbackTime, totalLazy)
-               << std::endl;
-        cbFile << totalCallback << "," << totalCallbackTime << "," << totalLazy
-               << std::endl;
-
-      }
+      auto t1 = std::chrono::high_resolution_clock::now();
+      totalCallbackTime += std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
+      totalLazy += forts.size();
 
       break;
     }

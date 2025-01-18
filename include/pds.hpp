@@ -43,6 +43,9 @@ struct SolveResult {
   double gap;
   double nodes;
   SolveState state;
+  size_t totalCallback;
+  size_t totalCallbackTime;
+  size_t totalLazy;
 };
 
 class Pds {

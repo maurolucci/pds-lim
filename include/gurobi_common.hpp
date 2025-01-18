@@ -14,6 +14,11 @@ struct MIPModel {
   std::unique_ptr<GRBModel> model;
   std::map<Vertex, GRBVar> s;
   std::map<Edge, GRBVar> w;
+
+  size_t totalCallback;
+  size_t totalCallbackTime;
+  size_t totalLazy;
+
   MIPModel();
   MIPModel(MIPModel &&other) = default;
   virtual ~MIPModel();

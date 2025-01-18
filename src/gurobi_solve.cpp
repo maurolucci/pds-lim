@@ -9,7 +9,8 @@ GRBEnv &getEnv() {
   return env;
 }
 
-MIPModel::MIPModel() : model(std::make_unique<GRBModel>(getEnv())), s(), w() {}
+MIPModel::MIPModel() : model(std::make_unique<GRBModel>(getEnv())), s(), w(),
+  totalCallback(0), totalCallbackTime(0), totalLazy(0) {}
 MIPModel::~MIPModel() {}
 
 SolveResult solveMIP(Pds &input, MIPModel &mipmodel,
@@ -31,7 +32,10 @@ SolveResult solveMIP(Pds &input, MIPModel &mipmodel,
                         0.0,
                         model.get(GRB_DoubleAttr_MIPGap),
                         model.get(GRB_DoubleAttr_NodeCount),
-                        SolveState::Other};
+                        SolveState::Other,
+                        mipmodel.totalCallback, 
+                        mipmodel.totalCallbackTime,
+                        mipmodel.totalLazy};
 
   switch (model.get(GRB_IntAttr_Status)) {
   case GRB_INFEASIBLE:

@@ -222,7 +222,7 @@ int main(int argc, const char **argv) {
       std::string stats(fmt::format(
           "{solver},{name},{n},{m},{zi},{channels},{variables},{"
           "constraints},{run},{lower_bound},{upper_bound},{gap},{result}"
-          ",{nodes},{t_solver}\n",
+          ",{nodes},{t_solver},{callback},{t_callback},{lazy}\n",
           "solver"_a = solver, "name"_a = filename, "n"_a = n, "m"_a = m,
           "zi"_a = zi, "channels"_a = n_channels,
           "variables"_a = result.variables,
@@ -230,7 +230,10 @@ int main(int argc, const char **argv) {
           "lower_bound"_a = result.lower, "upper_bound"_a = result.upper,
           "gap"_a = result.gap, "result"_a = format_solve_state(result.state),
           "nodes"_a = result.nodes, 
-          "t_solver"_a = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count()));
+          "t_solver"_a = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count()
+          "callback"_a = result.totalCallback,
+          "t_callback"_a = result.totalCallbackTime,
+          "lazy"_a = result.totalLazy));
       if (vm.count("outdir")) {
         std::ofstream statFile(outDirs["stat"], std::ofstream::out);
         statFile << stats;
