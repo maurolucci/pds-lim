@@ -28,9 +28,9 @@ SolveResult solveMIP(Pds &input, MIPModel &mipmodel,
   model.optimize();
   SolveResult result = {model.get(GRB_IntAttr_NumVars),
                         model.get(GRB_IntAttr_NumConstrs),
-                        1.0,
-                        0.0,
-                        model.get(GRB_DoubleAttr_MIPGap),
+                        -1.0,
+                        -1.0,
+                        100.0,
                         model.get(GRB_DoubleAttr_NodeCount),
                         SolveState::Other,
                         mipmodel.totalCallback, 
@@ -44,12 +44,16 @@ SolveResult solveMIP(Pds &input, MIPModel &mipmodel,
   case GRB_OPTIMAL:
     result.lower = static_cast<size_t>(model.get(GRB_DoubleAttr_ObjBound));
     result.upper = static_cast<size_t>(model.get(GRB_DoubleAttr_ObjVal));
+    result.gap = model.get(GRB_DoubleAttr_MIPGap);
     result.state = SolveState::Optimal;
     break;
   case GRB_TIME_LIMIT:
     result.lower = model.get(GRB_DoubleAttr_ObjBound);
-    result.upper = static_cast<size_t>(model.get(GRB_DoubleAttr_ObjVal));
     result.state = SolveState::Timeout;
+    if (model.get(GRB_IntAttr_SolCount) > 0) {
+      result.upper = static_cast<size_t>(model.get(GRB_DoubleAttr_ObjVal));
+      result.gap = model.get(GRB_DoubleAttr_MIPGap);
+    }
     break;
   }
 
