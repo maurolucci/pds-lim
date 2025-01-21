@@ -74,10 +74,11 @@ SolveResult solveMIP(Pds &input, MIPModel &mipmodel,
     VertexList mS = input.get_monitored_set(sValue, wValue);
     if (!input.isFeasible(mS))
       throw std::runtime_error("Error: The solution IS NOT FEASIBLE");
-  }
 
-  // Print solution
-  mipmodel.write_sol(solFile);
+    // Print solution
+    mipmodel.write_sol(solFile);
+
+  }
 
   return result;
 }
