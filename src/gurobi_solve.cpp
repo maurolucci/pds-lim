@@ -42,8 +42,8 @@ SolveResult solveMIP(Pds &input, MIPModel &mipmodel,
     result.state = SolveState::Infeasible;
     break;
   case GRB_OPTIMAL:
-    result.lower = static_cast<size_t>(model.get(GRB_DoubleAttr_ObjBound));
-    result.upper = static_cast<size_t>(model.get(GRB_DoubleAttr_ObjVal));
+    result.lower = static_cast<size_t>(round(model.get(GRB_DoubleAttr_ObjBound)));
+    result.upper = static_cast<size_t>(round(model.get(GRB_DoubleAttr_ObjVal)));
     result.gap = model.get(GRB_DoubleAttr_MIPGap);
     result.state = SolveState::Optimal;
     break;
@@ -51,7 +51,7 @@ SolveResult solveMIP(Pds &input, MIPModel &mipmodel,
     result.lower = model.get(GRB_DoubleAttr_ObjBound);
     result.state = SolveState::Timeout;
     if (model.get(GRB_IntAttr_SolCount) > 0) {
-      result.upper = static_cast<size_t>(model.get(GRB_DoubleAttr_ObjVal));
+      result.upper = static_cast<size_t>(round(model.get(GRB_DoubleAttr_ObjVal)));
       result.gap = model.get(GRB_DoubleAttr_MIPGap);
     }
     break;
