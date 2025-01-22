@@ -2,7 +2,7 @@
 
 TIMEOUT=900
 NRUN=5
-MAXNODES=2000
+MAXNODES=4000
 declare -a SOLVERS=("brimkov" "forts" "cycles")
 CASES="instances.csv"
 BIN="../pds-lim"
