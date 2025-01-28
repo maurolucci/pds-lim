@@ -62,6 +62,8 @@ std::string format_solve_state(SolveState state) {
 auto getModel(const std::string &name) {
   if (name == "brimkov") {
     return brimkovModel;
+  } else if (name == "jovanovic") {
+    return jovanovicModel;
   } else {
     throw std::invalid_argument("unknown model " + name);
   }
@@ -89,7 +91,7 @@ int main(int argc, const char **argv) {
   po::options_description desc(argv[0]);
   desc.add_options()("help,h", "show this help");
   desc.add_options()("solver,s", po::value<std::string>()->required(),
-                     "solver, can be any of [brimkov,]");
+                     "solver, can be any of [brimkov,jovanovic,cycles,forts]");
   desc.add_options()("n-channels,w", po::value<size_t>()->required(),
                      "number of channels");
   desc.add_options()(
