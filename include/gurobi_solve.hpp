@@ -10,6 +10,8 @@ namespace pds {
 
 MIPModel brimkovModel(Pds &input);
 
+MIPModel jovanovicModel(Pds &inputs);
+
 SolveResult solveMIP(const Pds &input, MIPModel &model,
                      boost::optional<std::string> output, double timeLimit);
 

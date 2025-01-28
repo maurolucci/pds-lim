@@ -239,7 +239,7 @@ MIPModel jovanovicModel(Pds &input) {
       for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
         if (input.isZeroInjection(u)) {
           GRBLinExpr constr7 = 0;
-          contr7 += y.at(std::make_pair(u, v)) + y.at(std::make_pair(v, u));
+          constr7 += y.at(std::make_pair(u, v)) + y.at(std::make_pair(v, u));
           model.addConstr(constr7 <= 1);
         }
 
