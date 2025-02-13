@@ -241,10 +241,7 @@ private:
       for (auto z : boost::make_iterator_range(adjacent_vertices(u, graph))) {
         if (!input.isMonitored(z))
           continue;
-        if (!input.isActivated(z))
-          fort.first.insert(z);
-        else
-          fort.second.insert(std::make_pair(z, u));
+        fort.second.insert(std::make_pair(z, u));
       }
     }
     return fort;
