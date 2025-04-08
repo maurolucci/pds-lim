@@ -1,4 +1,4 @@
-#include "cycle_solve.hpp"
+#include "fps_solve.hpp"
 #include "gurobi_common.hpp"
 
 #include <fstream>
@@ -7,7 +7,7 @@
 namespace pds {
 
 namespace {
-struct LazyCycleCB : public GRBCallback {
+struct LazyFpsCB : public GRBCallback {
 
   MIPModel mipmodel;
   GRBModel &model;
@@ -24,8 +24,8 @@ struct LazyCycleCB : public GRBCallback {
   size_t &totalCallbackTime;
   size_t &totalLazy;
 
-  LazyCycleCB(Pds &input, std::ostream &callbackFile,
-              std::ostream &solutionFile, size_t lzLimit)
+  LazyFpsCB(Pds &input, std::ostream &callbackFile, std::ostream &solutionFile,
+            size_t lzLimit)
       : mipmodel(), model(*mipmodel.model), s(mipmodel.s), w(mipmodel.w), y(),
         input(input), graph(input.get_graph()), cbFile(callbackFile),
         solFile(solutionFile), lazyLimit(lzLimit),
@@ -78,22 +78,6 @@ struct LazyCycleCB : public GRBCallback {
       model.addConstr(constr3 ==
                       std::min(boost::degree(v, graph), (n_channels - 1)) *
                           s.at(v));
-    }
-
-    // Build translation function
-    for (auto v : boost::make_iterator_range(vertices(graph))) {
-      if (!input.isZeroInjection(v))
-        continue;
-      for (auto u :
-           boost::make_iterator_range(boost::adjacent_vertices(v, graph))) {
-        translate[std::make_pair(v, u)].push_back(std::make_pair(v, u));
-        for (auto w :
-             boost::make_iterator_range(boost::adjacent_vertices(v, graph))) {
-          if (w == u)
-            continue;
-          translate[std::make_pair(w, u)].push_back(std::make_pair(v, u));
-        }
-      }
     }
   }
 
@@ -155,14 +139,12 @@ struct LazyCycleCB : public GRBCallback {
 
         // Find violated cycles
         PrecedenceDigraph digraph = build_precedence_digraph();
-        std::set<VertexList> cycles = violatedCycles(digraph, lazyLimit);
-        std::pair<double, double> avg = addLazyCycles(cycles);
-        totalLazy += cycles.size();
+        std::set<VertexList> fpss = violatedFpss(digraph, lazyLimit);
+        double avg = addLazyFpss(fpss);
+        totalLazy += fpss.size();
 
         // Report to callback file
-        cbFile << fmt::format(
-                      "# cycles: {}, avg. size: {:.2f}, avg. ext. size: {:.2f}",
-                      cycles.size(), avg.first, avg.second)
+        cbFile << fmt::format("# fps: {}, avg. size: {:.2f}", fpss.size(), avg)
                << std::endl;
       }
 
@@ -177,6 +159,8 @@ struct LazyCycleCB : public GRBCallback {
 
 private:
   PrecedenceDigraph build_precedence_digraph() {
+
+    translate.clear();
 
     PrecedenceDigraph digraph;
     std::map<Vertex, Vertex> name;
@@ -195,6 +179,8 @@ private:
           if (!name.contains(u))
             name[u] = boost::add_vertex(LabelledVertex{.label = u}, digraph);
           boost::add_edge(name[u], name[v], digraph);
+          translate[std::make_pair(name[u], name[v])].push_back(
+              std::make_pair(u, v));
         }
         for (auto w :
              boost::make_iterator_range(boost::adjacent_vertices(u, graph))) {
@@ -203,6 +189,8 @@ private:
           if (!name.contains(w))
             name[w] = boost::add_vertex(LabelledVertex{.label = w}, digraph);
           boost::add_edge(name[w], name[v], digraph);
+          translate[std::make_pair(name[w], name[v])].push_back(
+              std::make_pair(w, v));
         }
       }
     }
@@ -210,30 +198,30 @@ private:
     return digraph;
   }
 
-  std::set<VertexList> violatedCycles(PrecedenceDigraph &digraph,
-                                      size_t cyclesLimit) {
-    std::set<VertexList> cycles;
+  std::set<VertexList> violatedFpss(PrecedenceDigraph &digraph,
+                                    size_t fpssLimit) {
+    std::set<VertexList> fpss;
     // auto randomVertices = boost::range::random_shuffle(vertices(digraph));
 
     for (auto v : boost::make_iterator_range(vertices(digraph))) {
-      if (cycles.size() >= cyclesLimit)
+      if (fpss.size() >= fpssLimit)
         break;
-      VertexList cycle = findCycle(digraph, v);
-      if (cycle.empty())
+      VertexList fps = findFps(digraph, v);
+      if (fps.empty())
         continue;
-      cycles.insert(cycle);
+      fpss.insert(fps);
     }
-    return cycles;
+    return fpss;
   }
 
-  VertexList findCycle(PrecedenceDigraph &digraph, Node v) {
-    VertexList cycle;
+  VertexList findFps(PrecedenceDigraph &digraph, Node v) {
+    VertexList fps;
     std::map<Node, std::pair<Node, size_t>> precededBy;
     Node lastVertex = v;
 
     for (int i = 1; !precededBy.contains(lastVertex); ++i) {
       if (in_degree(lastVertex, digraph) == 0)
-        return cycle; // Return empty cycle
+        return fps; // Return empty Fps
 
       // Check if lastVertex has an already visited in-neighbor
       // Select the last visited in-neighbor
@@ -264,49 +252,45 @@ private:
     // Traverse de cycle
     auto u = lastVertex;
     do {
-      cycle.push_back(digraph[u].label);
+      fps.push_back(digraph[u].label);
       u = precededBy.at(u).first;
     } while (u != lastVertex);
 
-    // Rotate the cycle so the minium element is in the front
-    boost::range::rotate(cycle, boost::range::min_element(cycle));
+    // Rotate the fps so the minium element is in the front
+    boost::range::rotate(fps, boost::range::min_element(fps));
 
-    return cycle;
+    return fps;
   }
 
-  std::pair<double, double> addLazyCycles(std::set<VertexList> &cycles) {
+  double addLazyFpss(std::set<VertexList> &fpss) {
 
-    size_t accumCycle = 0;
-    size_t accumExt = 0;
+    size_t accumFps = 0;
 
-    for (const VertexList &cycle : cycles) {
+    for (const VertexList &fps : fpss) {
       EdgeList translated;
-      for (auto it = cycle.rbegin(); it != cycle.rend();) {
+      for (auto it = fps.rbegin(); it != fps.rend();) {
         Vertex v = *it++;
-        int u = it != cycle.rend() ? *it : cycle.back();
-        for (auto e : translate.at(std::make_pair(v, u))) {
-          translated.push_back(e);
-          accumExt++;
-        }
-        accumCycle++;
+        int u = it != fps.rend() ? *it : fps.back();
+        auto e = std::next(translate.at(std::make_pair(v, u)).begin(),
+                           rand() % translate.at(std::make_pair(v, u)).size());
+        accumFps++;
       }
       GRBLinExpr pathSum;
       for (auto [u, v] : translated)
         pathSum += y.at(std::make_pair(u, v));
-      addLazy(pathSum <= cycle.size() - 1);
+      addLazy(pathSum <= fps.size() - 1);
     }
 
-    return std::make_pair(static_cast<double>(accumCycle) / cycles.size(),
-                          static_cast<double>(accumExt) / cycles.size());
+    return static_cast<double>(accumFps) / fpss.size();
   }
 };
 } // end of namespace
 
-SolveResult solveLazyCycles(Pds &input, boost::optional<std::string> logPath,
-                            std::ostream &callbackFile, std::ostream &solFile,
-                            double timeLimit, size_t lazyLimit) {
-  LazyCycleCB lazyCycles(input, callbackFile, solFile, lazyLimit);
-  return lazyCycles.solve(logPath, timeLimit);
+SolveResult solveLazyFpss(Pds &input, boost::optional<std::string> logPath,
+                          std::ostream &callbackFile, std::ostream &solFile,
+                          double timeLimit, size_t lazyLimit) {
+  LazyFpsCB lazyFpss(input, callbackFile, solFile, lazyLimit);
+  return lazyFpss.solve(logPath, timeLimit);
 }
 
 } // end of namespace pds

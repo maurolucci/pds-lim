@@ -1,5 +1,6 @@
 #include "cycle_solve.hpp"
 #include "fort_solve.hpp"
+#include "fps_solve.hpp"
 #include "graphio.hpp"
 #include "gurobi_common.hpp"
 #include "gurobi_solve.hpp"
@@ -90,8 +91,9 @@ int main(int argc, const char **argv) {
   // Parse arguments
   po::options_description desc(argv[0]);
   desc.add_options()("help,h", "show this help");
-  desc.add_options()("solver,s", po::value<std::string>()->required(),
-                     "solver, can be any of [brimkov,jovanovic,cycles,forts]");
+  desc.add_options()(
+      "solver,s", po::value<std::string>()->required(),
+      "solver, can be any of [brimkov,jovanovic,fpss,cycles,forts]");
   desc.add_options()("n-channels,w", po::value<size_t>()->required(),
                      "number of channels");
   desc.add_options()(
@@ -198,13 +200,17 @@ int main(int argc, const char **argv) {
                                            : outPut();
 
       // Solve
-      auto t0 = std::chrono::high_resolution_clock::now();;
+      auto t0 = std::chrono::high_resolution_clock::now();
+      ;
       SolveResult result;
       std::string solverName = vm["solver"].as<std::string>();
       try {
         if (solverName == "cycles") {
           result = solveLazyCycles(input, logPath, output.cbFile,
                                    output.solFile, timeout, lazyLimit);
+        } else if (solverName == "fpss") {
+          result = solveLazyFpss(input, logPath, output.cbFile, output.solFile,
+                                 timeout, lazyLimit);
         } else if (solverName == "forts") {
           result = solveLazyForts(input, logPath, output.cbFile, output.solFile,
                                   timeout, lazyLimit);
@@ -217,7 +223,8 @@ int main(int argc, const char **argv) {
                    ex.getMessage());
         throw ex;
       }
-      auto t1 = std::chrono::high_resolution_clock::now();;
+      auto t1 = std::chrono::high_resolution_clock::now();
+      ;
 
       // Write stats
       using namespace fmt::literals;
@@ -231,8 +238,10 @@ int main(int argc, const char **argv) {
           "constraints"_a = result.constraints, "run"_a = run,
           "lower_bound"_a = result.lower, "upper_bound"_a = result.upper,
           "gap"_a = result.gap, "result"_a = format_solve_state(result.state),
-          "nodes"_a = result.nodes, 
-          "t_solver"_a = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count(),
+          "nodes"_a = result.nodes,
+          "t_solver"_a =
+              std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0)
+                  .count(),
           "callback"_a = result.totalCallback,
           "t_callback"_a = result.totalCallbackTime,
           "lazy"_a = result.totalLazy));
