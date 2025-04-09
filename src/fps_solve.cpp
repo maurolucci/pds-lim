@@ -273,6 +273,7 @@ private:
         int u = it != fps.rend() ? *it : fps.back();
         auto e = std::next(translate.at(std::make_pair(v, u)).begin(),
                            rand() % translate.at(std::make_pair(v, u)).size());
+        translated.push_back(*e);
         accumFps++;
       }
       GRBLinExpr pathSum;
