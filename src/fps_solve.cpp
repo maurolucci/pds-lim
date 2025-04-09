@@ -179,8 +179,7 @@ private:
           if (!name.contains(u))
             name[u] = boost::add_vertex(LabelledVertex{.label = u}, digraph);
           boost::add_edge(name[u], name[v], digraph);
-          translate[std::make_pair(name[u], name[v])].push_back(
-              std::make_pair(u, v));
+          translate[std::make_pair(u, v)].push_back(std::make_pair(u, v));
         }
         for (auto w :
              boost::make_iterator_range(boost::adjacent_vertices(u, graph))) {
@@ -189,8 +188,7 @@ private:
           if (!name.contains(w))
             name[w] = boost::add_vertex(LabelledVertex{.label = w}, digraph);
           boost::add_edge(name[w], name[v], digraph);
-          translate[std::make_pair(name[w], name[v])].push_back(
-              std::make_pair(w, v));
+          translate[std::make_pair(w, v)].push_back(std::make_pair(u, v));
         }
       }
     }
