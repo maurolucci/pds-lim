@@ -3,7 +3,7 @@
 TIMEOUT=900
 NRUN=5
 MAXNODES=15000
-declare -a SOLVERS=("brimkov" "forts" "cycles" "jovanovic")
+declare -a SOLVERS=("brimkov" "forts" "cycles" "jovanovic" "fpss")
 CASES="instances.csv"
 BIN="../pds-lim"
 INPUT="../inputs/"
