@@ -65,6 +65,10 @@ auto getModel(const std::string &name) {
     return brimkovModel;
   } else if (name == "jovanovic") {
     return jovanovicModel;
+  } else if (name == "brimkov2") {
+    return brimkov2Model;
+  } else if (name == "jovanovic2") {
+    return jovanovic2Model;
   } else {
     throw std::invalid_argument("unknown model " + name);
   }
@@ -93,7 +97,7 @@ int main(int argc, const char **argv) {
   desc.add_options()("help,h", "show this help");
   desc.add_options()(
       "solver,s", po::value<std::string>()->required(),
-      "solver, can be any of [brimkov,jovanovic,fpss,cycles,forts]");
+      "solver, can be any of [brimkov,brimkov2,jovanovic,jovanovic2,fpss,cycles,forts]");
   desc.add_options()("n-channels,w", po::value<size_t>()->required(),
                      "number of channels");
   desc.add_options()(

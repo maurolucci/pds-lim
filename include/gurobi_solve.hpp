@@ -9,8 +9,10 @@
 namespace pds {
 
 MIPModel brimkovModel(Pds &input);
+MIPModel brimkovModel2(Pds &input);
 
 MIPModel jovanovicModel(Pds &inputs);
+MIPModel jovanovicModel2(Pds &inputs);
 
 SolveResult solveMIP(const Pds &input, MIPModel &model,
                      boost::optional<std::string> output, double timeLimit);
