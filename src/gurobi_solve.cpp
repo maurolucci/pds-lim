@@ -69,9 +69,12 @@ SolveResult solveMIP(Pds &input, MIPModel &mipmodel,
     std::map<Edge, double> wValue;
     for (auto v : boost::make_iterator_range(vertices(graph))) {
       sValue[v] = mipmodel.s.at(v).get(GRB_DoubleAttr_X);
-      for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
+      if (degree(v, graph) <= input.get_n_channels() - 1)
+        continue;
+      for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph))) {
         wValue[std::make_pair(v, u)] =
             mipmodel.w.at(std::make_pair(v, u)).get(GRB_DoubleAttr_X);
+      }
     }
 
     VertexList mS = input.get_monitored_set(sValue, wValue);
