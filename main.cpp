@@ -1,4 +1,5 @@
 #include "cycle_solve.hpp"
+#include "fort2_solve.hpp"
 #include "fort_solve.hpp"
 #include "fps2_solve.hpp"
 #include "fps_solve.hpp"
@@ -99,7 +100,7 @@ int main(int argc, const char **argv) {
   desc.add_options()(
       "solver,s", po::value<std::string>()->required(),
       "solver, can be any of "
-      "[brimkov,brimkov2,jovanovic,jovanovic2,fpss,fpss2,cycles,forts]");
+      "[brimkov,brimkov2,jovanovic,jovanovic2,fpss,fpss2,cycles,forts,forts2]");
   desc.add_options()("n-channels,w", po::value<size_t>()->required(),
                      "number of channels");
   desc.add_options()(
@@ -223,6 +224,9 @@ int main(int argc, const char **argv) {
         } else if (solverName == "forts") {
           result = solveLazyForts(input, logPath, output.cbFile, output.solFile,
                                   timeout, lazyLimit);
+        } else if (solverName == "forts2") {
+          result = solveLazyForts2(input, logPath, output.cbFile,
+                                   output.solFile, timeout, lazyLimit);
         } else {
           Solver solve = getSolver(vm);
           result = solve(input, logPath, output.solFile, timeout);

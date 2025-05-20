@@ -41,7 +41,6 @@ struct LazyFpsCB : public GRBCallback {
     for (auto v : boost::make_iterator_range(vertices(graph))) {
       s.try_emplace(
           v, model.addVar(0.0, 1.0, 1.0, GRB_BINARY, fmt::format("s_{}", v)));
-
       if (degree(v, graph) > n_channels - 1) {
         for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
           w.try_emplace(std::make_pair(v, u),
@@ -74,7 +73,7 @@ struct LazyFpsCB : public GRBCallback {
       }
       model.addConstr(constr1 >= 1);
 
-      // (3) sum_{u \in N(v)} w_v_u <= (omega_v - 1) s_v, \forall v \in V2
+      // (3) sum_{u \in N(v)} w_v_u <= (omega_v - 1) s_v, \forall v \in V_2
       if (degree(v, graph) > n_channels - 1) {
         GRBLinExpr constr3 = 0;
         for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
