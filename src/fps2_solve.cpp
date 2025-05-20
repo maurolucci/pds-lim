@@ -290,9 +290,9 @@ private:
 };
 } // end of namespace
 
-SolveResult solveLazyFpss(Pds &input, boost::optional<std::string> logPath,
-                          std::ostream &callbackFile, std::ostream &solFile,
-                          double timeLimit, size_t lazyLimit) {
+SolveResult solveLazyFpss2(Pds &input, boost::optional<std::string> logPath,
+                           std::ostream &callbackFile, std::ostream &solFile,
+                           double timeLimit, size_t lazyLimit) {
   LazyFpsCB lazyFpss(input, callbackFile, solFile, lazyLimit);
   return lazyFpss.solve(logPath, timeLimit);
 }
