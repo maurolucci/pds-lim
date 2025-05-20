@@ -1,5 +1,6 @@
 #include "cycle_solve.hpp"
 #include "fort_solve.hpp"
+#include "fps2_solve.hpp"
 #include "fps_solve.hpp"
 #include "graphio.hpp"
 #include "gurobi_common.hpp"
@@ -97,7 +98,8 @@ int main(int argc, const char **argv) {
   desc.add_options()("help,h", "show this help");
   desc.add_options()(
       "solver,s", po::value<std::string>()->required(),
-      "solver, can be any of [brimkov,brimkov2,jovanovic,jovanovic2,fpss,cycles,forts]");
+      "solver, can be any of "
+      "[brimkov,brimkov2,jovanovic,jovanovic2,fpss,fpss2,cycles,forts]");
   desc.add_options()("n-channels,w", po::value<size_t>()->required(),
                      "number of channels");
   desc.add_options()(
@@ -215,6 +217,9 @@ int main(int argc, const char **argv) {
         } else if (solverName == "fpss") {
           result = solveLazyFpss(input, logPath, output.cbFile, output.solFile,
                                  timeout, lazyLimit);
+        } else if (solverName == "fpss2") {
+          result = solveLazyFpss2(input, logPath, output.cbFile, output.solFile,
+                                  timeout, lazyLimit);
         } else if (solverName == "forts") {
           result = solveLazyForts(input, logPath, output.cbFile, output.solFile,
                                   timeout, lazyLimit);
