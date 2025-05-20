@@ -121,7 +121,7 @@ struct LazyFpsCB : public GRBCallback {
         if (getSolution(s.at(v)) > 0.5) {
           std::vector<Vertex> neighbors;
           for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
-            if (degree(v, graph) < input.get_n_channels() - 1 ||
+            if (degree(v, graph) <= input.get_n_channels() - 1 ||
                 getSolution(w.at(std::make_pair(v, u))) > 0.5)
               neighbors.push_back(u);
           input.activate(v, neighbors, turnedOn, turnedOff);
