@@ -2,6 +2,7 @@
 #include "fort2_solve.hpp"
 #include "fort_solve.hpp"
 #include "fps2_solve.hpp"
+#include "fps_fort_solve.hpp"
 #include "fps_solve.hpp"
 #include "graphio.hpp"
 #include "gurobi_common.hpp"
@@ -227,6 +228,9 @@ int main(int argc, const char **argv) {
         } else if (solverName == "forts2") {
           result = solveLazyForts2(input, logPath, output.cbFile,
                                    output.solFile, timeout, lazyLimit);
+        } else if (solverName == "fpss-forts") {
+          result = solveLazyFpssForts(input, logPath, output.cbFile,
+                                      output.solFile, timeout, lazyLimit);
         } else {
           Solver solve = getSolver(vm);
           result = solve(input, logPath, output.solFile, timeout);

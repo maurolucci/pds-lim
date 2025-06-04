@@ -137,7 +137,7 @@ struct LazyFpsCB : public GRBCallback {
       // Feasibility check
       if (!input.isFeasible()) {
 
-        // Find violated cycles
+        // Find violated fpss
         PrecedenceDigraph digraph = build_precedence_digraph();
         std::set<VertexList> fpss = violatedFpss(digraph, lazyLimit);
         double avg = addLazyFpss(fpss);

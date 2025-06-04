@@ -1,17 +1,13 @@
-#include "fort2_solve.hpp"
+#include "fps_fort_solve.hpp"
 #include "gurobi_common.hpp"
 
-#include <boost/range/adaptor/filtered.hpp>
-#include <chrono>
+#include <fstream>
 #include <gurobi_c++.h>
 
 namespace pds {
 
-using Fort = std::tuple<std::set<Vertex>, std::set<Vertex>, std::set<Edge>>;
-
 namespace {
-
-struct LazyFortCB : public GRBCallback {
+struct LazyFpsFortCB : public GRBCallback {
 
   MIPModel mipmodel;
   GRBModel &model;
@@ -22,21 +18,22 @@ struct LazyFortCB : public GRBCallback {
   const PowerGrid &graph;
   std::map<Edge, EdgeList> translate;
   std::ostream &cbFile, &solFile;
-  size_t n_channels;
   size_t lazyLimit;
 
   size_t &totalCallback;
   size_t &totalCallbackTime;
   size_t &totalLazy;
 
-  LazyFortCB(Pds &input, std::ostream &callbackFile, std::ostream &solutionFile,
-             size_t lzLimit)
+  LazyFpsFortCB(Pds &input, std::ostream &callbackFile,
+                std::ostream &solutionFile, size_t lzLimit)
       : mipmodel(), model(*mipmodel.model), s(mipmodel.s), w(mipmodel.w), y(),
         input(input), graph(input.get_graph()), cbFile(callbackFile),
-        solFile(solutionFile), n_channels(input.get_n_channels()),
-        lazyLimit(lzLimit), totalCallback(mipmodel.totalCallback),
+        solFile(solutionFile), lazyLimit(lzLimit),
+        totalCallback(mipmodel.totalCallback),
         totalCallbackTime(mipmodel.totalCallbackTime),
         totalLazy(mipmodel.totalLazy) {
+
+    size_t n_channels = input.get_n_channels();
 
     model.setCallback(this);
 
@@ -50,16 +47,38 @@ struct LazyFortCB : public GRBCallback {
                         model.addVar(0.0, 1.0, 0.0, GRB_BINARY,
                                      fmt::format("w_{}_{}", v, u)));
       }
+      if (input.isZeroInjection(v)) {
+        for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
+          y.try_emplace(std::make_pair(v, u),
+                        model.addVar(0.0, 1.0, 0.0, GRB_BINARY,
+                                     fmt::format("y_{}_{}", v, u)));
+      }
     }
 
     // Add constraints
     for (auto v : boost::make_iterator_range(vertices(graph))) {
-      // (2) sum_{u \in N(v)} w_v_u <= (omega_v - 1) s_v, \forall v \in V_2
+
+      // (1) s_v + sum_{u \in N(v) \cap V_1} s_u + sum_{u \in N(v) \cap V_2}
+      // w_u_v + sum_{u \in N(v) \cap V_Z} y_u_v == 1, \forall v \in V
+      GRBLinExpr constr1 = 0;
+      constr1 += s.at(v);
+      for (auto u :
+           boost::make_iterator_range(boost::adjacent_vertices(v, graph))) {
+        if (degree(u, graph) <= n_channels - 1)
+          constr1 += s.at(u);
+        else
+          constr1 += w.at(std::make_pair(u, v));
+        if (input.isZeroInjection(u))
+          constr1 += y.at(std::make_pair(u, v));
+      }
+      model.addConstr(constr1 >= 1);
+
+      // (3) sum_{u \in N(v)} w_v_u <= (omega_v - 1) s_v, \forall v \in V_2
       if (degree(v, graph) > n_channels - 1) {
-        GRBLinExpr constr = 0;
+        GRBLinExpr constr3 = 0;
         for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
-          constr += w.at(std::make_pair(v, u));
-        model.addConstr(constr ==
+          constr3 += w.at(std::make_pair(v, u));
+        model.addConstr(constr3 ==
                         std::min(degree(v, graph), (n_channels - 1)) * s.at(v));
       }
     }
@@ -122,6 +141,16 @@ struct LazyFortCB : public GRBCallback {
       // Feasibility check
       if (!input.isFeasible()) {
 
+        // Find violated fpss
+        PrecedenceDigraph digraph = build_precedence_digraph();
+        std::set<VertexList> fpss = violatedFpss(digraph, lazyLimit);
+        double avg = addLazyFpss(fpss);
+        totalLazy += fpss.size();
+
+        // Report to callback file
+        cbFile << fmt::format("# fps: {}, avg. size: {:.2f}", fpss.size(), avg)
+               << std::endl;
+
         // Find violated forts
         std::set<Fort> forts = violatedForts(lazyLimit);
         std::pair<double, double> avg = addLazyForts(forts);
@@ -144,6 +173,131 @@ struct LazyFortCB : public GRBCallback {
   }
 
 private:
+  PrecedenceDigraph build_precedence_digraph() {
+
+    translate.clear();
+
+    PrecedenceDigraph digraph;
+    std::map<Vertex, Vertex> name;
+    for (auto v : boost::make_iterator_range(vertices(graph))) {
+      if (input.isMonitored(v))
+        continue;
+      if (!name.contains(v))
+        name[v] = boost::add_vertex(LabelledVertex{.label = v}, digraph);
+      for (auto u :
+           boost::make_iterator_range(boost::adjacent_vertices(v, graph))) {
+        if (!input.isZeroInjection(u))
+          continue;
+        if (getSolution(y.at(std::make_pair(u, v))) < 0.5)
+          continue;
+        if (!input.isMonitored(u)) {
+          if (!name.contains(u))
+            name[u] = boost::add_vertex(LabelledVertex{.label = u}, digraph);
+          boost::add_edge(name[u], name[v], digraph);
+          translate[std::make_pair(u, v)].push_back(std::make_pair(u, v));
+        }
+        for (auto w :
+             boost::make_iterator_range(boost::adjacent_vertices(u, graph))) {
+          if (w == v || input.isMonitored(w))
+            continue;
+          if (!name.contains(w))
+            name[w] = boost::add_vertex(LabelledVertex{.label = w}, digraph);
+          boost::add_edge(name[w], name[v], digraph);
+          translate[std::make_pair(w, v)].push_back(std::make_pair(u, v));
+        }
+      }
+    }
+
+    return digraph;
+  }
+
+  std::set<VertexList> violatedFpss(PrecedenceDigraph &digraph,
+                                    size_t fpssLimit) {
+    std::set<VertexList> fpss;
+    // auto randomVertices = boost::range::random_shuffle(vertices(digraph));
+
+    for (auto v : boost::make_iterator_range(vertices(digraph))) {
+      if (fpss.size() >= fpssLimit)
+        break;
+      VertexList fps = findFps(digraph, v);
+      if (fps.empty())
+        continue;
+      fpss.insert(fps);
+    }
+    return fpss;
+  }
+
+  VertexList findFps(PrecedenceDigraph &digraph, Node v) {
+    VertexList fps;
+    std::map<Node, std::pair<Node, size_t>> precededBy;
+    Node lastVertex = v;
+
+    for (int i = 1; !precededBy.contains(lastVertex); ++i) {
+      if (in_degree(lastVertex, digraph) == 0)
+        return fps; // Return empty Fps
+
+      // Check if lastVertex has an already visited in-neighbor
+      // Select the last visited in-neighbor
+      Node next;
+      size_t max_i = 0;
+      for (auto e : make_iterator_range(in_edges(lastVertex, digraph))) {
+        Node u = source(e, digraph);
+        if (!precededBy.contains(u))
+          continue;
+        auto p = precededBy.at(u);
+        if (p.second <= max_i) {
+          continue;
+        }
+        next = u;
+        max_i = p.second;
+      }
+
+      if (max_i == 0) {
+        // Choose a random in-neighbor
+        auto e = std::next(in_edges(lastVertex, digraph).first,
+                           rand() % in_degree(lastVertex, digraph));
+        next = source(*e, digraph);
+      }
+      precededBy.emplace(lastVertex, std::make_pair(next, i));
+      lastVertex = next;
+    }
+
+    // Traverse de cycle
+    auto u = lastVertex;
+    do {
+      fps.push_back(digraph[u].label);
+      u = precededBy.at(u).first;
+    } while (u != lastVertex);
+
+    // Rotate the fps so the minium element is in the front
+    boost::range::rotate(fps, boost::range::min_element(fps));
+
+    return fps;
+  }
+
+  double addLazyFpss(std::set<VertexList> &fpss) {
+
+    size_t accumFps = 0;
+
+    for (const VertexList &fps : fpss) {
+      EdgeList translated;
+      for (auto it = fps.rbegin(); it != fps.rend();) {
+        Vertex v = *it++;
+        int u = it != fps.rend() ? *it : fps.back();
+        auto e = std::next(translate.at(std::make_pair(v, u)).begin(),
+                           rand() % translate.at(std::make_pair(v, u)).size());
+        translated.push_back(*e);
+        accumFps++;
+      }
+      GRBLinExpr pathSum;
+      for (auto [u, v] : translated)
+        pathSum += y.at(std::make_pair(u, v));
+      addLazy(pathSum <= fps.size() - 1);
+    }
+
+    return static_cast<double>(accumFps) / fpss.size();
+  }
+
   std::set<Fort> violatedForts(size_t fortsLimit) {
 
     std::set<Fort> forts;
@@ -277,13 +431,14 @@ private:
                           static_cast<double>(accumEdges) / forts.size());
   }
 };
-} // namespace
+} // end of namespace
 
-SolveResult solveLazyForts2(Pds &input, boost::optional<std::string> logPath,
-                            std::ostream &callbackFile, std::ostream &solFile,
-                            double timeLimit, size_t lazyLimit) {
-  LazyFortCB lazyForts(input, callbackFile, solFile, lazyLimit);
-  return lazyForts.solve(logPath, timeLimit);
+SolveResult solveLazyFpssForts(Pds &input, boost::optional<std::string> logPath,
+                               std::ostream &callbackFile,
+                               std::ostream &solFile, double timeLimit,
+                               size_t lazyLimit) {
+  LazyFpsFortCB lazyFpssForts(input, callbackFile, solFile, lazyLimit);
+  return lazyFpssForts.solve(logPath, timeLimit);
 }
 
 } // end of namespace pds
