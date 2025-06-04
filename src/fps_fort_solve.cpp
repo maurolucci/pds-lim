@@ -6,6 +6,8 @@
 
 namespace pds {
 
+using Fort = std::tuple<std::set<Vertex>, std::set<Vertex>, std::set<Edge>>;
+
 namespace {
 struct LazyFpsFortCB : public GRBCallback {
 
