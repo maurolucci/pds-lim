@@ -14,7 +14,7 @@ FLAGS = -Wall -Wextra -O3
 
 all: deps pds-lim
 
-pds-lim: main.cpp pds.o graphio.o gurobi_solve.o cycle_solve.o fps_solve.o fps2_solve.o fort_solve.o fort2_solve.o $(DEPS)
+pds-lim: main.cpp pds.o graphio.o gurobi_solve.o cycle_solve.o fps_solve.o fps2_solve.o fort_solve.o fort2_solve.o fps_fort_solve.o $(DEPS)
 	$(CC) -o $@ $^ $(INCS) $(LIBS) $(FLAGS)
 
 deps:
@@ -43,4 +43,7 @@ fort_solve.o: $(SRCPATH)/fort_solve.cpp $(INCPATH)/fort_solve.hpp $(INCPATH)/gur
 	$(CC) -g -c $< $(INCS) $(FLAGS)
 
 fort2_solve.o: $(SRCPATH)/fort2_solve.cpp $(INCPATH)/fort2_solve.hpp $(INCPATH)/gurobi_common.hpp $(INCPATH)/pds.hpp
+	$(CC) -g -c $< $(INCS) $(FLAGS)
+
+fps_fort_solve.o: $(SRCPATH)/fps_fort_solve.cpp $(INCPATH)/fps_fort_solve.hpp $(INCPATH)/gurobi_common.hpp $(INCPATH)/pds.hpp
 	$(CC) -g -c $< $(INCS) $(FLAGS)
