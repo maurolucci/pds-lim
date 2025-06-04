@@ -324,7 +324,7 @@ private:
                                unmonitoredSet.end();
                       }),
                   std::back_inserter(neighbors[v]));
-      size_t k = std::min(neighbors[v].size(), n_channels - 1);
+      size_t k = std::min(neighbors[v].size(), input.get_n_channels() - 1);
       if (k < neighbors[v].size()) {
         neighbors[v].resize(k);
         random_unique(neighbors[v].begin(), neighbors[v].end(), k);
