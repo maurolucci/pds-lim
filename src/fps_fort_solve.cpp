@@ -155,13 +155,13 @@ struct LazyFpsFortCB : public GRBCallback {
 
         // Find violated forts
         std::set<Fort> forts = violatedForts(lazyLimit);
-        std::pair<double, double> avg = addLazyForts(forts);
+        std::pair<double, double> pavg = addLazyForts(forts);
         totalLazy += forts.size();
 
         // Report to callback file
         cbFile << fmt::format("# forts: {}, avg. vertex size: {:.2f}, avg. "
                               "edge size: {:.2f}",
-                              forts.size(), avg.first, avg.second)
+                              forts.size(), pavg.first, pavg.second)
                << std::endl;
       }
 
