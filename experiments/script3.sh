@@ -25,8 +25,8 @@ do
         for omega in $(seq 1 $(($degree+1)))
         do
             date
-            time $BIN -s $solver -w $omega -f $INPUT$name -n $NRUN -t $TIMEOUT -o $OUTPUT -val-ineq 1
-            time $BIN -s $solver -w $omega -f $INPUT$name -n $NRUN -t $TIMEOUT -o $OUTPUT -val-ineq 2
+            time $BIN -s $solver -w $omega -f $INPUT$name -n $NRUN -t $TIMEOUT -o $OUTPUT --val-ineq 1
+            time $BIN -s $solver -w $omega -f $INPUT$name -n $NRUN -t $TIMEOUT -o $OUTPUT --val-ineq 2
         done
     done
 done
