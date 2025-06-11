@@ -318,8 +318,8 @@ private:
 
 SolveResult solveLazyFpss2(Pds &input, boost::optional<std::string> logPath,
                            std::ostream &callbackFile, std::ostream &solFile,
-                           double timeLimit, size_t lazyLimit) {
-  LazyFpsCB lazyFpss(input, callbackFile, solFile, lazyLimit);
+                           double timeLimit, size_t valIneq, size_t lazyLimit) {
+  LazyFpsCB lazyFpss(input, callbackFile, solFile, valIneq, lazyLimit);
   return lazyFpss.solve(logPath, timeLimit);
 }
 
