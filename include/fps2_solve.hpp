@@ -6,7 +6,7 @@
 
 namespace pds {
 SolveResult solveLazyFpss2(Pds &, boost::optional<std::string>, std::ostream &,
-                           std::ostream &, double, size_t size_t);
+                           std::ostream &, double, size_t, size_t);
 } // end of namespace pds
 
 #endif // FPS2_SOLVE_HPP
