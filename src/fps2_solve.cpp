@@ -18,6 +18,7 @@ struct LazyFpsCB : public GRBCallback {
   const PowerGrid &graph;
   std::map<Edge, EdgeList> translate;
   std::ostream &cbFile, &solFile;
+  size_t valIneq;
   size_t lazyLimit;
 
   size_t &totalCallback;
@@ -25,10 +26,10 @@ struct LazyFpsCB : public GRBCallback {
   size_t &totalLazy;
 
   LazyFpsCB(Pds &input, std::ostream &callbackFile, std::ostream &solutionFile,
-            size_t lzLimit)
+            size_t valIneq, size_t lzLimit)
       : mipmodel(), model(*mipmodel.model), s(mipmodel.s), w(mipmodel.w), y(),
         input(input), graph(input.get_graph()), cbFile(callbackFile),
-        solFile(solutionFile), lazyLimit(lzLimit),
+        solFile(solutionFile), valIneq(valIneq), lazyLimit(lzLimit),
         totalCallback(mipmodel.totalCallback),
         totalCallbackTime(mipmodel.totalCallbackTime),
         totalLazy(mipmodel.totalLazy) {
@@ -80,6 +81,32 @@ struct LazyFpsCB : public GRBCallback {
           constr3 += w.at(std::make_pair(v, u));
         model.addConstr(constr3 ==
                         std::min(degree(v, graph), (n_channels - 1)) * s.at(v));
+      }
+
+      // Limitation of outgoing propagations
+      // (4.1) sum_{u \in N(v)} y_{vu} <= 1 - s_v, \forall v \in V_Z \cap V_1
+      // (4.1) sum_{u \in N(v)} y_{vu} <= 1, \forall v \in V_Z \cap V_2
+      if (valIneq == 1 && input.isZeroInjection(v)) {
+        GRBLinExpr constr4 = 0;
+        for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
+          constr4 += y.at(std::make_pair(v, u));
+        if (degree(v, graph) <= n_channels - 1)
+          constr4 += s.at(v);
+        model.addConstr(constr4 <= 1);
+      }
+
+      // Limitation of incomming propagations
+      // (5.1) sum_{u \in N(v) \cap V_Z} y_{uv} <= 1, \forall v \in V
+      if (valIneq == 2) {
+        GRBLinExpr constr5 = 0;
+        size_t nlhs = 0;
+        for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
+          if (input.isZeroInjection(u)) {
+            constr5 += y.at(std::make_pair(u, v));
+            nlhs++;
+          }
+        if (nlhs > 0)
+          model.addConstr(constr5 <= 1);
       }
     }
   }

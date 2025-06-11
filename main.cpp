@@ -116,6 +116,11 @@ int main(int argc, const char **argv) {
   desc.add_options()("outdir,o", po::value<std::string>(),
                      "write outputs to the specified directory");
   desc.add_options()(
+      "val-ineq", po::value<size_t>()->default_value(0),
+      "additional valid inequalities in the formulation, can be "
+      "any of [0 (none), 1 (limitation of outgoing "
+      "propagations), 2 (limitation of incomming propagations)]");
+  desc.add_options()(
       "lazy-limit",
       po::value<size_t>()->default_value(std::numeric_limits<size_t>::max()),
       "maximum number of lazy contraints added per callback");
@@ -144,6 +149,7 @@ int main(int argc, const char **argv) {
   size_t repetitions = vm["repeat"].as<size_t>();
   double timeout = vm["timeout"].as<double>();
   size_t n_channels = vm["n-channels"].as<size_t>();
+  size_t valIneq = vm["val-ineq"].as<size_t>();
   size_t lazyLimit = vm["lazy-limit"].as<size_t>();
   std::vector<std::string> inputs;
   if (vm.count("graph")) {
@@ -172,6 +178,8 @@ int main(int argc, const char **argv) {
     Pds input(readGraphML(filename, allZeroInjection), n_channels);
     for (size_t run = 0; run < repetitions; ++run) {
 
+      if (valIneq > 0)
+        solver.append(fmt::format("-v{}", valIneq));
       fs::path currentName(fs::path(filename).stem().string() +
                            fmt::format("-{}-{}-{}", solver, n_channels, run));
       std::cout << "Solving Instance " << currentName << " ..." << std::endl;
@@ -221,7 +229,7 @@ int main(int argc, const char **argv) {
                                  timeout, lazyLimit);
         } else if (solverName == "fpss2") {
           result = solveLazyFpss2(input, logPath, output.cbFile, output.solFile,
-                                  timeout, lazyLimit);
+                                  timeout, valIneq, lazyLimit);
         } else if (solverName == "forts") {
           result = solveLazyForts(input, logPath, output.cbFile, output.solFile,
                                   timeout, lazyLimit);
