@@ -173,16 +173,21 @@ int main(int argc, const char **argv) {
     }
   }
 
+  // Update solver name, if necessary
+  if (valIneq > 0)
+    solver.append(fmt::format("-v{}", valIneq));
+
   // Read inputs
   for (const std::string &filename : inputs) {
+
     Pds input(readGraphML(filename, allZeroInjection), n_channels);
+
     for (size_t run = 0; run < repetitions; ++run) {
 
-      if (valIneq > 0)
-        solver.append(fmt::format("-v{}", valIneq));
       fs::path currentName(fs::path(filename).stem().string() +
                            fmt::format("-{}-{}-{}", solver, n_channels, run));
       std::cout << "Solving Instance " << currentName << " ..." << std::endl;
+
       if (vm.count("outdir")) {
         for (auto [key, _] : outDirs) {
           outDirs[key].replace_filename(currentName);
