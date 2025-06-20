@@ -119,7 +119,7 @@ int main(int argc, const char **argv) {
       "val-ineq", po::value<size_t>()->default_value(0),
       "additional valid inequalities in the formulation, can be "
       "any of [0 (none), 1 (limitation of outgoing "
-      "propagations), 2 (limitation of incomming propagations)]");
+      "propagations), 2 (limitation of incomming propagations), 3 (both)]");
   desc.add_options()(
       "lazy-limit",
       po::value<size_t>()->default_value(std::numeric_limits<size_t>::max()),

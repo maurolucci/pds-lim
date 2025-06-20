@@ -86,7 +86,7 @@ struct LazyFpsCB : public GRBCallback {
       // Limitation of outgoing propagations
       // (4.1) sum_{u \in N(v)} y_{vu} <= 1 - s_v, \forall v \in V_Z \cap V_1
       // (4.1) sum_{u \in N(v)} y_{vu} <= 1, \forall v \in V_Z \cap V_2
-      if (valIneq == 1 && input.isZeroInjection(v)) {
+      if ((valIneq == 1 || valIneq == 3) && input.isZeroInjection(v)) {
         GRBLinExpr constr4 = 0;
         for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
           constr4 += y.at(std::make_pair(v, u));
@@ -97,7 +97,7 @@ struct LazyFpsCB : public GRBCallback {
 
       // Limitation of incomming propagations
       // (5.1) sum_{u \in N(v) \cap V_Z} y_{uv} <= 1, \forall v \in V
-      if (valIneq == 2) {
+      if (valIneq == 2 || valIneq == 3) {
         GRBLinExpr constr5 = 0;
         size_t nlhs = 0;
         for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
