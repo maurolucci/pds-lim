@@ -7,7 +7,7 @@
 
 namespace pds {
 
-using Fort = std::pair<std::set<Vertex>, std::set<Edge>>;
+using Fort = std::tuple<std::set<Vertex>, std::set<Vertex>, std::set<Edge>>;
 
 namespace {
 
@@ -34,7 +34,7 @@ struct LazyFortCB : public GRBCallback {
       : mipmodel(), model(*mipmodel.model), s(mipmodel.s), w(mipmodel.w), y(),
         input(input), graph(input.get_graph()), cbFile(callbackFile),
         solFile(solutionFile), n_channels(input.get_n_channels()),
-        lazyLimit(lzLimit), totalCallback(mipmodel.totalCallback), 
+        lazyLimit(lzLimit), totalCallback(mipmodel.totalCallback),
         totalCallbackTime(mipmodel.totalCallbackTime),
         totalLazy(mipmodel.totalLazy) {
 
@@ -44,24 +44,25 @@ struct LazyFortCB : public GRBCallback {
     for (auto v : boost::make_iterator_range(vertices(graph))) {
       s.try_emplace(
           v, model.addVar(0.0, 1.0, 1.0, GRB_BINARY, fmt::format("s_{}", v)));
-      for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph))) {
-        w.try_emplace(std::make_pair(v, u),
-                      model.addVar(0.0, 1.0, 0.0, GRB_BINARY,
-                                   fmt::format("w_{}_{}", v, u)));
+      if (degree(v, graph) > n_channels - 1) {
+        for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
+          w.try_emplace(std::make_pair(v, u),
+                        model.addVar(0.0, 1.0, 0.0, GRB_BINARY,
+                                     fmt::format("w_{}_{}", v, u)));
       }
     }
 
-    // (2) sum_{u \in N(v)} w_v_u <= (omega_v - 1) s_v, \forall v \in V
+    // Add constraints
     for (auto v : boost::make_iterator_range(vertices(graph))) {
-      GRBLinExpr constr3 = 0;
-      for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph))) {
-        constr3 += w.at(std::make_pair(v, u));
+      // (2) sum_{u \in N(v)} w_v_u <= (omega_v - 1) s_v, \forall v \in V_2
+      if (degree(v, graph) > n_channels - 1) {
+        GRBLinExpr constr = 0;
+        for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
+          constr += w.at(std::make_pair(v, u));
+        model.addConstr(constr ==
+                        std::min(degree(v, graph), (n_channels - 1)) * s.at(v));
       }
-      model.addConstr(constr3 ==
-                      std::min(degree(v, graph), (n_channels - 1)) *
-                          s.at(v));
     }
-
   }
 
   SolveResult solve(boost::optional<std::string> logPath, double timeLimit) {
@@ -100,27 +101,28 @@ struct LazyFortCB : public GRBCallback {
         if (getSolution(s.at(v)) > 0.5) {
           std::vector<Vertex> neighbors;
           for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
-            if (getSolution(w.at(std::make_pair(v, u))) > 0.5)
+            if (degree(v, graph) <= input.get_n_channels() - 1 ||
+                getSolution(w.at(std::make_pair(v, u))) > 0.5)
               neighbors.push_back(u);
           input.activate(v, neighbors, turnedOn, turnedOff);
         }
       // Try propagation to turned off vertices
       input.propagate_to(turnedOff, turnedOn);
       // Try propagation from turned on vertices or their neighbors
-      std::list<Vertex> candidates; 
-      for (auto u: turnedOn) { 
+      std::list<Vertex> candidates;
+      for (auto u : turnedOn) {
         if (input.isZeroInjection(u))
           candidates.push_back(u);
-        for (auto y: boost::make_iterator_range(adjacent_vertices(u, graph)))
+        for (auto y : boost::make_iterator_range(adjacent_vertices(u, graph)))
           if (input.isZeroInjection(y) && input.isMonitored(y))
             candidates.push_back(y);
       }
       input.propagate_from(candidates, turnedOn);
-      
+
       // Feasibility check
       if (!input.isFeasible()) {
 
-        // Find violated cycles
+        // Find violated forts
         std::set<Fort> forts = violatedForts(lazyLimit);
         std::pair<double, double> avg = addLazyForts(forts);
         totalLazy += forts.size();
@@ -133,20 +135,21 @@ struct LazyFortCB : public GRBCallback {
       }
 
       auto t1 = std::chrono::high_resolution_clock::now();
-      totalCallbackTime += std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
+      totalCallbackTime +=
+          std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0)
+              .count();
 
       break;
     }
   }
 
 private:
-
   std::set<Fort> violatedForts(size_t fortsLimit) {
 
     std::set<Fort> forts;
 
     // Copy solution
-    Pds newSolution (input);
+    Pds newSolution(input);
 
     // Get unmonitored set
     std::vector<Vertex> unmonitoredSet;
@@ -156,9 +159,9 @@ private:
     boost::range::random_shuffle(unmonitoredSet);
 
     // Preselect random neighbors for unmonitored vertices
-    std::map<Vertex, std::vector<Vertex>> neighbors; 
+    std::map<Vertex, std::vector<Vertex>> neighbors;
     for (Vertex v : unmonitoredSet) {
-      neighbors[v] = std::vector<Vertex> ();
+      neighbors[v] = std::vector<Vertex>();
       boost::copy(adjacent_vertices(v, graph) |
                       boost::adaptors::filtered([unmonitoredSet](auto v) {
                         return boost::range::find(unmonitoredSet, v) !=
@@ -193,7 +196,7 @@ private:
 
       // Feasibility check
       if (!newSolution.isFeasible()) {
-        
+
         // Find and insert fort
         forts.insert(findFort(newSolution));
 
@@ -202,18 +205,16 @@ private:
         newSolution.activate(v, neighbors[v], turnedOn, trash);
 
         // Try propagations from changed vertices or their neighbors
-        std::list<Vertex> candidates; 
-        for (auto u: turnedOn) { 
+        std::list<Vertex> candidates;
+        for (auto u : turnedOn) {
           if (newSolution.isZeroInjection(u))
             candidates.push_back(u);
-          for (auto y: boost::make_iterator_range(adjacent_vertices(u, graph)))
+          for (auto y : boost::make_iterator_range(adjacent_vertices(u, graph)))
             if (newSolution.isZeroInjection(y) && newSolution.isMonitored(y))
               candidates.push_back(y);
         }
         newSolution.propagate_from(candidates, trash);
-
       }
-
     }
 
     return forts;
@@ -237,11 +238,14 @@ private:
     for (auto u : boost::make_iterator_range(vertices(graph))) {
       if (input.isMonitored(u))
         continue;
-      fort.first.insert(u);
+      std::get<0>(fort).insert(u);
       for (auto z : boost::make_iterator_range(adjacent_vertices(u, graph))) {
         if (!input.isMonitored(z))
           continue;
-        fort.second.insert(std::make_pair(z, u));
+        if (degree(z, graph) <= input.get_n_channels() - 1)
+          std::get<1>(fort).insert(z);
+        else
+          std::get<2>(fort).insert(std::make_pair(z, u));
       }
     }
     return fort;
@@ -254,11 +258,15 @@ private:
 
     for (auto &f : forts) {
       GRBLinExpr fortSum;
-      for (auto v : f.first) {
+      for (auto v : std::get<0>(f)) {
         fortSum += s.at(v);
         accumVertices++;
       }
-      for (auto e : f.second) {
+      for (auto v : std::get<1>(f)) {
+        fortSum += s.at(v);
+        accumVertices++;
+      }
+      for (auto e : std::get<2>(f)) {
         fortSum += w.at(e);
         accumEdges++;
       }

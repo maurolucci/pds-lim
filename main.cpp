@@ -1,7 +1,5 @@
 #include "cycle_solve.hpp"
-#include "fort2_solve.hpp"
 #include "fort_solve.hpp"
-#include "fps2_solve.hpp"
 #include "fps_fort_solve.hpp"
 #include "fps_solve.hpp"
 #include "graphio.hpp"
@@ -67,10 +65,6 @@ auto getModel(const std::string &name) {
   if (name == "brimkov") {
     return brimkovModel;
   } else if (name == "jovanovic") {
-    return jovanovicModel;
-  } else if (name == "brimkov2") {
-    return brimkov2Model;
-  } else if (name == "jovanovic2") {
     return jovanovic2Model;
   } else {
     throw std::invalid_argument("unknown model " + name);
@@ -230,15 +224,9 @@ int main(int argc, const char **argv) {
           result = solveLazyCycles(input, logPath, output.cbFile,
                                    output.solFile, timeout, lazyLimit);
         } else if (solverName == "fpss") {
-          result = solveLazyFpss(input, logPath, output.cbFile, output.solFile,
-                                 timeout, lazyLimit);
-        } else if (solverName == "fpss2") {
           result = solveLazyFpss2(input, logPath, output.cbFile, output.solFile,
                                   timeout, valIneq, lazyLimit);
         } else if (solverName == "forts") {
-          result = solveLazyForts(input, logPath, output.cbFile, output.solFile,
-                                  timeout, lazyLimit);
-        } else if (solverName == "forts2") {
           result = solveLazyForts2(input, logPath, output.cbFile,
                                    output.solFile, timeout, lazyLimit);
         } else if (solverName == "fpss-forts") {
