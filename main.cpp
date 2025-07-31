@@ -174,6 +174,12 @@ int main(int argc, const char **argv) {
   // Update solver name, if necessary
   if (valIneq > 0)
     solver.append(fmt::format("-v{}", valIneq));
+  if (initFPS1)
+    solver.append("-i1");
+  if (initFPS2)
+    solver.append("-i2");
+  if (initFPS3)
+    solver.append("-i3");
 
   // Read inputs
   for (const std::string &filename : inputs) {
