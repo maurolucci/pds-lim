@@ -65,7 +65,7 @@ auto getModel(const std::string &name) {
   if (name == "brimkov") {
     return brimkovModel;
   } else if (name == "jovanovic") {
-    return jovanovic2Model;
+    return jovanovicModel;
   } else {
     throw std::invalid_argument("unknown model " + name);
   }
@@ -224,10 +224,10 @@ int main(int argc, const char **argv) {
           result = solveLazyCycles(input, logPath, output.cbFile,
                                    output.solFile, timeout, lazyLimit);
         } else if (solverName == "fpss") {
-          result = solveLazyFpss2(input, logPath, output.cbFile, output.solFile,
+          result = solveLazyFpss(input, logPath, output.cbFile, output.solFile,
                                   timeout, valIneq, lazyLimit);
         } else if (solverName == "forts") {
-          result = solveLazyForts2(input, logPath, output.cbFile,
+          result = solveLazyForts(input, logPath, output.cbFile,
                                    output.solFile, timeout, lazyLimit);
         } else if (solverName == "fpss-forts") {
           result = solveLazyFpssForts(input, logPath, output.cbFile,

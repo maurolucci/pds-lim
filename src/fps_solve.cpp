@@ -366,7 +366,7 @@ private:
     } while (u != lastVertex);
 
     // Rotate the fps so the minium element is in the front
-    boost::range::rotate(fps, boost::range::min_element(fps));
+    boost::range::rotate(cycle, boost::range::min_element(cycle));
 
     return cycle;
   }
