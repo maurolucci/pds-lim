@@ -112,9 +112,9 @@ int main(int argc, const char **argv) {
   desc.add_options()("val-ineq", po::value<size_t>()->default_value(0),
                      "valid inequalities, can be any of [0 (none), 1 (OutP), 2 "
                      "(InP), 3 (both)]");
-  desc.add_options()("init-FPS-1", "consider initial FPS constraints type 1");
-  desc.add_options()("init-FPS-2", "consider initial FPS constraints type 2");
-  desc.add_options()("init-FPS-3", "consider initial FPS constraints type 3");
+  desc.add_options()("init-fps-1", "consider initial FPS constraints type 1");
+  desc.add_options()("init-fps-2", "consider initial FPS constraints type 2");
+  desc.add_options()("init-fps-3", "consider initial FPS constraints type 3");
   desc.add_options()(
       "lazy-limit",
       po::value<size_t>()->default_value(std::numeric_limits<size_t>::max()),
@@ -145,9 +145,9 @@ int main(int argc, const char **argv) {
   double timeout = vm["timeout"].as<double>();
   size_t n_channels = vm["n-channels"].as<size_t>();
   size_t valIneq = vm["val-ineq"].as<size_t>();
-  bool initFPS1 = vm.count("init-FPS-1");
-  bool initFPS2 = vm.count("init-FPS-2");
-  bool initFPS3 = vm.count("init-FPS-3");
+  bool initFPS1 = vm.count("init-fps-1");
+  bool initFPS2 = vm.count("init-fps-2");
+  bool initFPS3 = vm.count("init-fps-3");
   size_t lazyLimit = vm["lazy-limit"].as<size_t>();
   std::vector<std::string> inputs;
   if (vm.count("graph")) {

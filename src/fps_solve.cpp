@@ -128,6 +128,9 @@ struct LazyFpsCB : public GRBCallback {
              boost::make_iterator_range(boost::adjacent_vertices(v, graph))) {
           if (!input.isZeroInjection(u))
             continue;
+          // Avoid symmetries
+          if (u >= v)
+            continue;
           GRBLinExpr constr6_1 =
               y.at(std::make_pair(u, v)) + y.at(std::make_pair(v, u));
           model.addConstr(constr6_1 <= 1);
