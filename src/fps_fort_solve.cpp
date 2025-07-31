@@ -43,7 +43,7 @@ struct LazyFpsFortCB : public GRBCallback {
     for (auto v : boost::make_iterator_range(vertices(graph))) {
       s.try_emplace(
           v, model.addVar(0.0, 1.0, 1.0, GRB_BINARY, fmt::format("s_{}", v)));
-      if (degree(v, graph) > n_channels - 1) {
+      if (degree(v, graph) > n_channels) {
         for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
           w.try_emplace(std::make_pair(v, u),
                         model.addVar(0.0, 1.0, 0.0, GRB_BINARY,
@@ -66,7 +66,7 @@ struct LazyFpsFortCB : public GRBCallback {
       constr1 += s.at(v);
       for (auto u :
            boost::make_iterator_range(boost::adjacent_vertices(v, graph))) {
-        if (degree(u, graph) <= n_channels - 1)
+        if (degree(u, graph) <= n_channels)
           constr1 += s.at(u);
         else
           constr1 += w.at(std::make_pair(u, v));
@@ -75,13 +75,12 @@ struct LazyFpsFortCB : public GRBCallback {
       }
       model.addConstr(constr1 >= 1);
 
-      // (3) sum_{u \in N(v)} w_v_u <= (omega_v - 1) s_v, \forall v \in V_2
-      if (degree(v, graph) > n_channels - 1) {
+      // (3) sum_{u \in N(v)} w_v_u <= omega_v * s_v, \forall v \in V_2
+      if (degree(v, graph) > n_channels) {
         GRBLinExpr constr3 = 0;
         for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
           constr3 += w.at(std::make_pair(v, u));
-        model.addConstr(constr3 ==
-                        std::min(degree(v, graph), (n_channels - 1)) * s.at(v));
+        model.addConstr(constr3 == n_channels * s.at(v));
       }
     }
   }
@@ -122,7 +121,7 @@ struct LazyFpsFortCB : public GRBCallback {
         if (getSolution(s.at(v)) > 0.5) {
           std::vector<Vertex> neighbors;
           for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
-            if (degree(v, graph) <= input.get_n_channels() - 1 ||
+            if (degree(v, graph) <= input.get_n_channels() ||
                 getSolution(w.at(std::make_pair(v, u))) > 0.5)
               neighbors.push_back(u);
           input.activate(v, neighbors, turnedOn, turnedOff);
@@ -324,7 +323,7 @@ private:
                                unmonitoredSet.end();
                       }),
                   std::back_inserter(neighbors[v]));
-      size_t k = std::min(neighbors[v].size(), input.get_n_channels() - 1);
+      size_t k = std::min(neighbors[v].size(), input.get_n_channels());
       if (k < neighbors[v].size()) {
         neighbors[v].resize(k);
         random_unique(neighbors[v].begin(), neighbors[v].end(), k);
@@ -398,7 +397,7 @@ private:
       for (auto z : boost::make_iterator_range(adjacent_vertices(u, graph))) {
         if (!input.isMonitored(z))
           continue;
-        if (degree(z, graph) <= input.get_n_channels() - 1)
+        if (degree(z, graph) <= input.get_n_channels())
           std::get<1>(fort).insert(z);
         else
           std::get<2>(fort).insert(std::make_pair(z, u));

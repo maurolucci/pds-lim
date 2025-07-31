@@ -69,7 +69,7 @@ SolveResult solveMIP(Pds &input, MIPModel &mipmodel,
     std::map<Edge, double> wValue;
     for (auto v : boost::make_iterator_range(vertices(graph))) {
       sValue[v] = mipmodel.s.at(v).get(GRB_DoubleAttr_X);
-      if (degree(v, graph) <= input.get_n_channels() - 1)
+      if (degree(v, graph) <= input.get_n_channels())
         continue;
       for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph))) {
         wValue[std::make_pair(v, u)] =
@@ -107,7 +107,7 @@ MIPModel brimkovModel(Pds &input) {
         v, model.addVar(0.0, 1.0, 1.0, GRB_BINARY, fmt::format("s_{}", v)));
     x.try_emplace(v, model.addVar(0.0, static_cast<double>(T), 0.0, GRB_INTEGER,
                                   fmt::format("x_{}", v)));
-    if (degree(v, graph) > n_channels - 1) {
+    if (degree(v, graph) > n_channels) {
       for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
         w.try_emplace(std::make_pair(v, u),
                       model.addVar(0.0, 1.0, 0.0, GRB_BINARY,
@@ -131,7 +131,7 @@ MIPModel brimkovModel(Pds &input) {
     constr1 += s.at(v);
     for (auto u :
          boost::make_iterator_range(boost::adjacent_vertices(v, graph))) {
-      if (degree(u, graph) <= n_channels - 1)
+      if (degree(u, graph) <= n_channels)
         constr1 += s.at(u);
       else
         constr1 += w.at(std::make_pair(u, v));
@@ -157,13 +157,12 @@ MIPModel brimkovModel(Pds &input) {
       }
     }
 
-    // (3) sum_{u \in N(v)} w_v_u <= (omega_v - 1) s_v, \forall v \in V2
-    if (degree(v, graph) > n_channels - 1) {
+    // (3) sum_{u \in N(v)} w_v_u <= omega_v * s_v, \forall v \in V2
+    if (degree(v, graph) > n_channels) {
       GRBLinExpr constr3 = 0;
       for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
         constr3 += w.at(std::make_pair(v, u));
-      model.addConstr(constr3 ==
-                      std::min(degree(v, graph), (n_channels - 1)) * s.at(v));
+      model.addConstr(constr3 == n_channels * s.at(v));
     }
   }
 
@@ -189,7 +188,7 @@ MIPModel jovanovicModel(Pds &input) {
         v, model.addVar(0.0, 1.0, 1.0, GRB_BINARY, fmt::format("s_{}", v)));
     x.try_emplace(v, model.addVar(1.0, static_cast<double>(M), 0.0, GRB_INTEGER,
                                   fmt::format("x_{}", v)));
-    if (degree(v, graph) > n_channels - 1) {
+    if (degree(v, graph) > n_channels) {
       for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
         w.try_emplace(std::make_pair(v, u),
                       model.addVar(0.0, 1.0, 0.0, GRB_BINARY,
@@ -217,7 +216,7 @@ MIPModel jovanovicModel(Pds &input) {
 
     for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph))) {
       // (3.1) x_v <= s_u + M(1-s_u), \forall v in V, u \in N(v) \cap V1
-      if (degree(u, graph) <= n_channels - 1) {
+      if (degree(u, graph) <= n_channels) {
         GRBLinExpr constr3 = 0;
         constr3 += x.at(v) - s.at(u) - M * (1 - s.at(u));
         model.addConstr(constr3 <= 0);
@@ -236,7 +235,7 @@ MIPModel jovanovicModel(Pds &input) {
     GRBLinExpr constr4 = 0;
     constr4 += x.at(v) - M * s.at(v);
     for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph))) {
-      if (degree(u, graph) <= n_channels - 1)
+      if (degree(u, graph) <= n_channels)
         constr4 -= M * s.at(u);
       else
         constr4 -= M * w.at(std::make_pair(u, v));
@@ -286,13 +285,12 @@ MIPModel jovanovicModel(Pds &input) {
       }
     }
 
-    // (9) sum_{u \in N(v)} w_v_u <= (omega_v - 1) s_v, \forall v \in V2
-    if (degree(v, graph) > n_channels - 1) {
+    // (9) sum_{u \in N(v)} w_v_u <= omega_v * s_v, \forall v \in V2
+    if (degree(v, graph) > n_channels) {
       GRBLinExpr constr9 = 0;
       for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
         constr9 += w.at(std::make_pair(v, u));
-      model.addConstr(constr9 ==
-                      std::min(degree(v, graph), (n_channels - 1)) * s.at(v));
+      model.addConstr(constr9 == n_channels * s.at(v));
     }
   }
 

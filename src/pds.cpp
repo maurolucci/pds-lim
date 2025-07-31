@@ -27,8 +27,7 @@ VertexList Pds::get_monitored_set(std::map<Vertex, double> &s,
       continue;
     monitored[v] = true;
     for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
-      if (degree(v, graph) <= n_channels - 1 ||
-          w.at(std::make_pair(v, u)) > 0.5)
+      if (degree(v, graph) <= n_channels || w.at(std::make_pair(v, u)) > 0.5)
         monitored[u] = true;
   }
 

@@ -21,7 +21,7 @@ do
     # solve
     for solver in "${SOLVERS[@]}"
     do
-        for omega in $(seq 1 $(($degree+1)))
+        for omega in $(seq 0 $degree)
         do
             date
             time $BIN -s $solver -w $omega -f $INPUT$name -n $NRUN -t $TIMEOUT -o $OUTPUT

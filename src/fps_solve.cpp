@@ -46,7 +46,7 @@ struct LazyFpsCB : public GRBCallback {
     for (auto v : boost::make_iterator_range(vertices(graph))) {
       s.try_emplace(
           v, model.addVar(0.0, 1.0, 1.0, GRB_BINARY, fmt::format("s_{}", v)));
-      if (degree(v, graph) > n_channels - 1) {
+      if (degree(v, graph) > n_channels) {
         for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
           w.try_emplace(std::make_pair(v, u),
                         model.addVar(0.0, 1.0, 0.0, GRB_BINARY,
@@ -69,7 +69,7 @@ struct LazyFpsCB : public GRBCallback {
       constr1 += s.at(v);
       for (auto u :
            boost::make_iterator_range(boost::adjacent_vertices(v, graph))) {
-        if (degree(u, graph) <= n_channels - 1)
+        if (degree(u, graph) <= n_channels)
           constr1 += s.at(u);
         else
           constr1 += w.at(std::make_pair(u, v));
@@ -78,13 +78,12 @@ struct LazyFpsCB : public GRBCallback {
       }
       model.addConstr(constr1 >= 1);
 
-      // (3) sum_{u \in N(v)} w_v_u <= (omega_v - 1) s_v, \forall v \in V_2
-      if (degree(v, graph) > n_channels - 1) {
+      // (3) sum_{u \in N(v)} w_v_u <= omega_v * s_v, \forall v \in V_2
+      if (degree(v, graph) > n_channels) {
         GRBLinExpr constr3 = 0;
         for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
           constr3 += w.at(std::make_pair(v, u));
-        model.addConstr(constr3 ==
-                        std::min(degree(v, graph), (n_channels - 1)) * s.at(v));
+        model.addConstr(constr3 == n_channels * s.at(v));
       }
 
       // Limitation of outgoing propagations
@@ -94,7 +93,7 @@ struct LazyFpsCB : public GRBCallback {
         GRBLinExpr constr4 = 0;
         for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
           constr4 += y.at(std::make_pair(v, u));
-        if (degree(v, graph) <= n_channels - 1)
+        if (degree(v, graph) <= n_channels)
           constr4 += s.at(v);
         model.addConstr(constr4 <= 1);
       }
@@ -200,7 +199,7 @@ struct LazyFpsCB : public GRBCallback {
         if (getSolution(s.at(v)) > 0.5) {
           std::vector<Vertex> neighbors;
           for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
-            if (degree(v, graph) <= input.get_n_channels() - 1 ||
+            if (degree(v, graph) <= input.get_n_channels() ||
                 getSolution(w.at(std::make_pair(v, u))) > 0.5)
               neighbors.push_back(u);
           input.activate(v, neighbors, turnedOn, turnedOff);
