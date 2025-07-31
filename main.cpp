@@ -109,11 +109,12 @@ int main(int argc, const char **argv) {
                      "gurobi time limit (seconds)");
   desc.add_options()("outdir,o", po::value<std::string>(),
                      "write outputs to the specified directory");
-  desc.add_options()(
-      "val-ineq", po::value<size_t>()->default_value(0),
-      "additional valid inequalities in the formulation, can be "
-      "any of [0 (none), 1 (limitation of outgoing "
-      "propagations), 2 (limitation of incomming propagations), 3 (both)]");
+  desc.add_options()("val-ineq", po::value<size_t>()->default_value(0),
+                     "valid inequalities, can be any of [0 (none), 1 (OutP), 2 "
+                     "(InP), 3 (both)]");
+  desc.add_options()("init-FPS-1", "consider initial FPS constraints type 1");
+  desc.add_options()("init-FPS-2", "consider initial FPS constraints type 2");
+  desc.add_options()("init-FPS-3", "consider initial FPS constraints type 3");
   desc.add_options()(
       "lazy-limit",
       po::value<size_t>()->default_value(std::numeric_limits<size_t>::max()),
@@ -144,6 +145,9 @@ int main(int argc, const char **argv) {
   double timeout = vm["timeout"].as<double>();
   size_t n_channels = vm["n-channels"].as<size_t>();
   size_t valIneq = vm["val-ineq"].as<size_t>();
+  bool initFPS1 = vm.count("init-FPS-1");
+  bool initFPS2 = vm.count("init-FPS-2");
+  bool initFPS3 = vm.count("init-FPS-3");
   size_t lazyLimit = vm["lazy-limit"].as<size_t>();
   std::vector<std::string> inputs;
   if (vm.count("graph")) {
@@ -225,10 +229,11 @@ int main(int argc, const char **argv) {
                                    output.solFile, timeout, lazyLimit);
         } else if (solverName == "fpss") {
           result = solveLazyFpss(input, logPath, output.cbFile, output.solFile,
-                                  timeout, valIneq, lazyLimit);
+                                 timeout, valIneq, initFPS1, initFPS2, initFPS3,
+                                 lazyLimit);
         } else if (solverName == "forts") {
-          result = solveLazyForts(input, logPath, output.cbFile,
-                                   output.solFile, timeout, lazyLimit);
+          result = solveLazyForts(input, logPath, output.cbFile, output.solFile,
+                                  timeout, lazyLimit);
         } else if (solverName == "fpss-forts") {
           result = solveLazyFpssForts(input, logPath, output.cbFile,
                                       output.solFile, timeout, lazyLimit);

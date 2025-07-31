@@ -16,8 +16,10 @@ struct LazyFpsCB : public GRBCallback {
   std::map<Edge, GRBVar> y;
   Pds &input;
   const PowerGrid &graph;
-  // Map from precedences to propagation
-  std::map<Edge, Edge> prec2props;
+  // Map from precedence to propagation
+  std::map<Edge, Edge> prec2prop;
+  // Map from precedence to list of propagations
+  std::map<Edge, EdgeList> prec2props;
   std::ostream &cbFile, &solFile;
   size_t valIneq;
   size_t lazyLimit;
@@ -27,7 +29,8 @@ struct LazyFpsCB : public GRBCallback {
   size_t &totalLazy;
 
   LazyFpsCB(Pds &input, std::ostream &callbackFile, std::ostream &solutionFile,
-            size_t valIneq, size_t lzLimit)
+            size_t valIneq, bool initFPS1, bool initFPS2, bool initFPS3,
+            size_t lzLimit)
       : mipmodel(), model(*mipmodel.model), s(mipmodel.s), w(mipmodel.w), y(),
         input(input), graph(input.get_graph()), cbFile(callbackFile),
         solFile(solutionFile), valIneq(valIneq), lazyLimit(lzLimit),
@@ -110,6 +113,53 @@ struct LazyFpsCB : public GRBCallback {
           model.addConstr(constr5 <= 1);
       }
     }
+
+    // Initial FPS constraints associated to cycles of length 2
+    // Type 1: both precedences are direct
+    // Type 2: one precedence is direct and the other is indirect
+    // Type 3: both precedences are indirect
+
+    // If only Type 1 is required, we use the characterization theorem
+    if (initFPS1 && !initFPS2 && !initFPS3) {
+      for (auto v : boost::make_iterator_range(vertices(graph))) {
+        if (!input.isZeroInjection(v))
+          continue;
+        for (auto u :
+             boost::make_iterator_range(boost::adjacent_vertices(v, graph))) {
+          if (!input.isZeroInjection(u))
+            continue;
+          GRBLinExpr constr6_1 =
+              y.at(std::make_pair(u, v)) + y.at(std::make_pair(v, u));
+          model.addConstr(constr6_1 <= 1);
+        }
+      }
+    } else if (initFPS2 || initFPS3) {
+      // Build the map from precedence to list of propagations
+      build_prec2props_map();
+      // Find cyclic precedences of length 2
+      for (auto &[prec, props1] : prec2props) {
+        auto [u, v] = prec;
+        // Avoid symmetries
+        if (u >= v)
+          continue;
+        // Check if there is an opposite precedence
+        if (!prec2props.contains(std::make_pair(v, u)))
+          continue;
+        auto &props2 = prec2props[std::make_pair(v, u)];
+        // Iterate over every possible FPS (cartesian product)
+        for (auto &p1 : props1)
+          for (auto &p2 : props2) {
+            // Classify the FPS
+            size_t type = classify_fps(p1, p2);
+            // Add FPS constraint
+            if ((type == 1 && initFPS1) || (type == 2 && initFPS2) ||
+                (type == 3 && initFPS3)) {
+              GRBLinExpr constr6 = y.at(p1) + y.at(p2);
+              model.addConstr(constr6 <= 1);
+            }
+          }
+      }
+    }
   }
 
   SolveResult solve(boost::optional<std::string> logPath, double timeLimit) {
@@ -189,12 +239,46 @@ struct LazyFpsCB : public GRBCallback {
   }
 
 private:
+  // Function that classifies an FPS
+  size_t classify_fps(Edge e1, Edge e2) {
+    auto [u1, v1] = e1;
+    auto [u2, v2] = e2;
+    if (u1 == v2 && v1 == u2)
+      return 1; // Type 1
+    else if (v1 == u2 || v2 == u1)
+      return 2; // Type 2
+    else if (v1 != v2)
+      return 3; // Type 3
+    else
+      abort(); // Unknown type
+  }
+
+  // Function to build the map from a precedence to the list of propagations
+  // that impose it
+  void build_prec2props_map() {
+    prec2props.clear();
+    for (auto v : boost::make_iterator_range(vertices(graph))) {
+      if (!input.isZeroInjection(v))
+        continue;
+      for (auto u :
+           boost::make_iterator_range(boost::adjacent_vertices(v, graph))) {
+        prec2props[std::make_pair(v, u)].push_back(std::make_pair(v, u));
+        for (auto w :
+             boost::make_iterator_range(boost::adjacent_vertices(v, graph))) {
+          if (w == u)
+            continue;
+          prec2props[std::make_pair(w, u)].push_back(std::make_pair(v, u));
+        }
+      }
+    }
+  }
+
   // Function to build the precedence digraph according to the current
   // propagations. ATTENTION: redundant propagations are ignored and only
   // the unmonitored vertices are considered
   PrecedenceDigraph build_precedence_digraph() {
 
-    prec2props.clear();
+    prec2prop.clear();
 
     PrecedenceDigraph digraph;
     std::map<Vertex, Vertex> name;
@@ -217,7 +301,7 @@ private:
           if (!name.contains(u))
             name[u] = boost::add_vertex(LabelledVertex{.label = u}, digraph);
           boost::add_edge(name[u], name[v], digraph);
-          prec2props[std::make_pair(u, v)] = std::make_pair(u, v);
+          prec2prop[std::make_pair(u, v)] = std::make_pair(u, v);
         }
         for (auto w :
              boost::make_iterator_range(boost::adjacent_vertices(u, graph))) {
@@ -226,7 +310,7 @@ private:
           if (!name.contains(w))
             name[w] = boost::add_vertex(LabelledVertex{.label = w}, digraph);
           boost::add_edge(name[w], name[v], digraph);
-          prec2props[std::make_pair(w, v)] = std::make_pair(u, v);
+          prec2prop[std::make_pair(w, v)] = std::make_pair(u, v);
         }
       }
     }
@@ -377,13 +461,14 @@ private:
     for (auto it = cycle.rbegin(); it != cycle.rend();) {
       Vertex v = *it++;
       int u = it != cycle.rend() ? *it : cycle.back();
-      auto e = prec2props.at(std::make_pair(v, u));
+      auto e = prec2prop.at(std::make_pair(v, u));
       fps.push_back(e);
     }
     return fps;
   }
 
-  // Function that finds a set of minimal FPSs (associated to chordless graphs)
+  // Function that finds a set of minimal FPSs (associated to chordless
+  // graphs)
   std::set<EdgeList> find_fpss(PrecedenceDigraph &digraph, size_t fpssLimit) {
     std::set<EdgeList> fpss;
     // Iterate over the vertices
@@ -419,8 +504,10 @@ private:
 
 SolveResult solveLazyFpss(Pds &input, boost::optional<std::string> logPath,
                           std::ostream &callbackFile, std::ostream &solFile,
-                          double timeLimit, size_t valIneq, size_t lazyLimit) {
-  LazyFpsCB lazyFpss(input, callbackFile, solFile, valIneq, lazyLimit);
+                          double timeLimit, size_t valIneq, bool initFPS1,
+                          bool initFPS2, bool initFPS3, size_t lazyLimit) {
+  LazyFpsCB lazyFpss(input, callbackFile, solFile, valIneq, initFPS1, initFPS2,
+                     initFPS3, lazyLimit);
   return lazyFpss.solve(logPath, timeLimit);
 }
 
