@@ -251,7 +251,7 @@ private:
       return 3; // Type 3
     else
       abort(); // Unknown type
-    return;
+    return 1;
   }
 
   // Function to build the map from a precedence to the list of propagations
