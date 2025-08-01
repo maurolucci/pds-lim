@@ -21,7 +21,6 @@ struct LazyFpsCB : public GRBCallback {
   // Map from precedence to list of propagations
   std::map<Edge, EdgeList> prec2props;
   std::ostream &cbFile, &solFile;
-  size_t valIneq;
   size_t lazyLimit;
 
   size_t &totalCallback;
@@ -29,11 +28,11 @@ struct LazyFpsCB : public GRBCallback {
   size_t &totalLazy;
 
   LazyFpsCB(Pds &input, std::ostream &callbackFile, std::ostream &solutionFile,
-            size_t valIneq, bool initFPS1, bool initFPS2, bool initFPS3,
-            size_t lzLimit)
+            bool inProp, bool outProp, bool initFPS1, bool initFPS2,
+            bool initFPS3, size_t lzLimit)
       : mipmodel(), model(*mipmodel.model), s(mipmodel.s), w(mipmodel.w), y(),
         input(input), graph(input.get_graph()), cbFile(callbackFile),
-        solFile(solutionFile), valIneq(valIneq), lazyLimit(lzLimit),
+        solFile(solutionFile), lazyLimit(lzLimit),
         totalCallback(mipmodel.totalCallback),
         totalCallbackTime(mipmodel.totalCallbackTime),
         totalLazy(mipmodel.totalLazy) {
@@ -89,7 +88,7 @@ struct LazyFpsCB : public GRBCallback {
       // Limitation of outgoing propagations
       // (4.1) sum_{u \in N(v)} y_{vu} <= 1 - s_v, \forall v \in V_Z \cap V_1
       // (4.1) sum_{u \in N(v)} y_{vu} <= 1, \forall v \in V_Z \cap V_2
-      if ((valIneq == 1 || valIneq == 3) && input.isZeroInjection(v)) {
+      if (outProp && input.isZeroInjection(v)) {
         GRBLinExpr constr4 = 0;
         for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
           constr4 += y.at(std::make_pair(v, u));
@@ -100,7 +99,7 @@ struct LazyFpsCB : public GRBCallback {
 
       // Limitation of incomming propagations
       // (5.1) sum_{u \in N(v) \cap V_Z} y_{uv} <= 1, \forall v \in V
-      if (valIneq == 2 || valIneq == 3) {
+      if (inProp) {
         GRBLinExpr constr5 = 0;
         size_t nlhs = 0;
         for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
@@ -116,7 +115,8 @@ struct LazyFpsCB : public GRBCallback {
     // Initial FPS constraints associated to cycles of length 2
     // Type 1: both precedences are direct
     // Type 2: one precedence is direct and the other is indirect
-    // Type 3: both precedences are indirect
+    // Type 3: both precedences are indirect (3.1 the same propagator and 3.2
+    // different propagators)
 
     // If only Type 1 is required, we use the characterization theorem
     if (initFPS1 && !initFPS2 && !initFPS3) {
@@ -155,7 +155,8 @@ struct LazyFpsCB : public GRBCallback {
             size_t type = classify_fps(p1, p2);
             // Add FPS constraint
             if ((type == 1 && initFPS1) || (type == 2 && initFPS2) ||
-                (type == 3 && initFPS3)) {
+                (type == 31 && initFPS3 && !outProp) ||
+                (type == 32 && initFPS3)) {
               GRBLinExpr constr6 = y.at(p1) + y.at(p2);
               model.addConstr(constr6 <= 1);
             }
@@ -249,11 +250,13 @@ private:
       return 1; // Type 1
     else if (v1 == u2 || v2 == u1)
       return 2; // Type 2
-    else if (v1 != v2)
-      return 3; // Type 3
+    else if (v1 != v2 && u1 == u2)
+      return 31; // Type 3.1
+    else if (v1 != v2 && u1 != u2)
+      return 32; // Type 3.2
     else
       abort(); // Unknown type
-    return 1;
+    return 0;
   }
 
   // Function to build the map from a precedence to the list of propagations
@@ -507,10 +510,11 @@ private:
 
 SolveResult solveLazyFpss(Pds &input, boost::optional<std::string> logPath,
                           std::ostream &callbackFile, std::ostream &solFile,
-                          double timeLimit, size_t valIneq, bool initFPS1,
-                          bool initFPS2, bool initFPS3, size_t lazyLimit) {
-  LazyFpsCB lazyFpss(input, callbackFile, solFile, valIneq, initFPS1, initFPS2,
-                     initFPS3, lazyLimit);
+                          double timeLimit, bool inProp, bool outProp,
+                          bool initFPS1, bool initFPS2, bool initFPS3,
+                          size_t lazyLimit) {
+  LazyFpsCB lazyFpss(input, callbackFile, solFile, inProp, outProp, initFPS1,
+                     initFPS2, initFPS3, lazyLimit);
   return lazyFpss.solve(logPath, timeLimit);
 }
 

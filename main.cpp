@@ -109,9 +109,8 @@ int main(int argc, const char **argv) {
                      "gurobi time limit (seconds)");
   desc.add_options()("outdir,o", po::value<std::string>(),
                      "write outputs to the specified directory");
-  desc.add_options()("val-ineq", po::value<size_t>()->default_value(0),
-                     "valid inequalities, can be any of [0 (none), 1 (OutP), 2 "
-                     "(InP), 3 (both)]");
+  desc.add_options()("in-prop", "consider incoming propagation constraints");
+  desc.add_options()("out-prop", "consider outgoing propagation constraints");
   desc.add_options()("init-fps-1", "consider initial FPS constraints type 1");
   desc.add_options()("init-fps-2", "consider initial FPS constraints type 2");
   desc.add_options()("init-fps-3", "consider initial FPS constraints type 3");
@@ -144,7 +143,8 @@ int main(int argc, const char **argv) {
   size_t repetitions = vm["repeat"].as<size_t>();
   double timeout = vm["timeout"].as<double>();
   size_t n_channels = vm["n-channels"].as<size_t>();
-  size_t valIneq = vm["val-ineq"].as<size_t>();
+  bool inProp = vm.count("in-prop");
+  bool outProp = vm.count("out-prop");
   bool initFPS1 = vm.count("init-fps-1");
   bool initFPS2 = vm.count("init-fps-2");
   bool initFPS3 = vm.count("init-fps-3");
@@ -172,14 +172,16 @@ int main(int argc, const char **argv) {
   }
 
   // Update solver name, if necessary
-  if (valIneq > 0)
-    solver.append(fmt::format("-v{}", valIneq));
+  if (inProp)
+    solver.append("-inp");
+  if (outProp)
+    solver.append("-outp");
   if (initFPS1)
-    solver.append("-i1");
+    solver.append("-fps1");
   if (initFPS2)
-    solver.append("-i2");
+    solver.append("-fps2");
   if (initFPS3)
-    solver.append("-i3");
+    solver.append("-fps3");
 
   // Read inputs
   for (const std::string &filename : inputs) {
@@ -235,8 +237,8 @@ int main(int argc, const char **argv) {
                                    output.solFile, timeout, lazyLimit);
         } else if (solverName == "fpss") {
           result = solveLazyFpss(input, logPath, output.cbFile, output.solFile,
-                                 timeout, valIneq, initFPS1, initFPS2, initFPS3,
-                                 lazyLimit);
+                                 timeout, inProp, outProp, initFPS1, initFPS2,
+                                 initFPS3, lazyLimit);
         } else if (solverName == "forts") {
           result = solveLazyForts(input, logPath, output.cbFile, output.solFile,
                                   timeout, lazyLimit);

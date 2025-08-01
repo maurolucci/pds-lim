@@ -6,7 +6,7 @@
 
 namespace pds {
 SolveResult solveLazyFpss(Pds &, boost::optional<std::string>, std::ostream &,
-                          std::ostream &, double, size_t, bool, bool, bool,
+                          std::ostream &, double, bool, bool, bool, bool, bool,
                           size_t);
 } // end of namespace pds
 
