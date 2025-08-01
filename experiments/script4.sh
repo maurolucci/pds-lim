@@ -25,14 +25,14 @@ do
         for omega in $(seq 0 $degree)
         do
             date
-            time $BIN -s $solver -w $omega -f $INPUT$name -n $NRUN -t $TIMEOUT -o $OUTPUT --val-ineq 1 
-            time $BIN -s $solver -w $omega -f $INPUT$name -n $NRUN -t $TIMEOUT -o $OUTPUT --val-ineq 1 --init-fps-1
-            time $BIN -s $solver -w $omega -f $INPUT$name -n $NRUN -t $TIMEOUT -o $OUTPUT --val-ineq 1 --init-fps-2
-            time $BIN -s $solver -w $omega -f $INPUT$name -n $NRUN -t $TIMEOUT -o $OUTPUT --val-ineq 1 --init-fps-3
-            time $BIN -s $solver -w $omega -f $INPUT$name -n $NRUN -t $TIMEOUT -o $OUTPUT --val-ineq 1 --init-fps-1 --init-fps-2
-            time $BIN -s $solver -w $omega -f $INPUT$name -n $NRUN -t $TIMEOUT -o $OUTPUT --val-ineq 1 --init-fps-1 --init-fps-3
-            time $BIN -s $solver -w $omega -f $INPUT$name -n $NRUN -t $TIMEOUT -o $OUTPUT --val-ineq 1 --init-fps-2 --init-fps-3
-            time $BIN -s $solver -w $omega -f $INPUT$name -n $NRUN -t $TIMEOUT -o $OUTPUT --val-ineq 1 --init-fps-1 --init-fps-2 --init-fps-3
+            time $BIN -s $solver -w $omega -f $INPUT$name -n $NRUN -t $TIMEOUT -o $OUTPUT --out-prop
+            time $BIN -s $solver -w $omega -f $INPUT$name -n $NRUN -t $TIMEOUT -o $OUTPUT --out-prop --init-fps-1
+            time $BIN -s $solver -w $omega -f $INPUT$name -n $NRUN -t $TIMEOUT -o $OUTPUT --out-prop --init-fps-2
+            time $BIN -s $solver -w $omega -f $INPUT$name -n $NRUN -t $TIMEOUT -o $OUTPUT --out-prop --init-fps-3
+            time $BIN -s $solver -w $omega -f $INPUT$name -n $NRUN -t $TIMEOUT -o $OUTPUT --out-prop --init-fps-1 --init-fps-2
+            time $BIN -s $solver -w $omega -f $INPUT$name -n $NRUN -t $TIMEOUT -o $OUTPUT --out-prop --init-fps-1 --init-fps-3
+            time $BIN -s $solver -w $omega -f $INPUT$name -n $NRUN -t $TIMEOUT -o $OUTPUT --out-prop --init-fps-2 --init-fps-3
+            time $BIN -s $solver -w $omega -f $INPUT$name -n $NRUN -t $TIMEOUT -o $OUTPUT --out-prop --init-fps-1 --init-fps-2 --init-fps-3
         done
     done
 done
