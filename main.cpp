@@ -1,4 +1,4 @@
-#include "cycle_solve.hpp"
+#include "efps_solve.hpp"
 #include "fort_solve.hpp"
 #include "fps_fort_solve.hpp"
 #include "fps_solve.hpp"
@@ -232,9 +232,9 @@ int main(int argc, const char **argv) {
       SolveResult result;
       std::string solverName = vm["solver"].as<std::string>();
       try {
-        if (solverName == "cycles") {
-          result = solveLazyCycles(input, logPath, output.cbFile,
-                                   output.solFile, timeout, lazyLimit);
+        if (solverName == "efpss") {
+          result = solveLazyEfpss(input, logPath, output.cbFile, output.solFile,
+                                  timeout, inProp, outProp, lazyLimit);
         } else if (solverName == "fpss") {
           result = solveLazyFpss(input, logPath, output.cbFile, output.solFile,
                                  timeout, inProp, outProp, initFPS1, initFPS2,
