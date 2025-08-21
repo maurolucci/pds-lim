@@ -134,7 +134,7 @@ struct LazyEfpsCB : public GRBCallback {
 
       // Update solution
 
-      // First deactivate vertices
+      // First deactivate vertices that became turned off
       std::list<Vertex> turnedOff, turnedOn;
       for (auto v : boost::make_iterator_range(vertices(graph)))
         if (getSolution(s.at(v)) < 0.5)
@@ -142,13 +142,14 @@ struct LazyEfpsCB : public GRBCallback {
       // Try propagation to turned off vertices
       input.propagate_to(turnedOff, turnedOn);
 
-      // Second activate vertices
+      // Second activate vertices that became turned on
       turnedOff.clear();
       for (auto v : boost::make_iterator_range(vertices(graph)))
         if (getSolution(s.at(v)) > 0.5) {
           std::vector<Vertex> neighbors;
           for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
-            if (getSolution(w.at(std::make_pair(v, u))) > 0.5)
+            if (degree(v, graph) <= input.get_n_channels() ||
+                getSolution(w.at(std::make_pair(v, u))) > 0.5)
               neighbors.push_back(u);
           input.activate(v, neighbors, turnedOn, turnedOff);
         }
