@@ -120,6 +120,8 @@ struct LazyFortCB : public GRBCallback {
       }
       input.propagate_from(candidates, turnedOn);
 
+      std::cout << getDoubleInfo(CB_MIP_MIPSOL_OBJ) << std::endl;
+
       // Feasibility check
       if (!input.isFeasible()) {
 
