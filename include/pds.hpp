@@ -99,6 +99,11 @@ public:
     return activated[v];
   }
 
+  [[nodiscard]] inline size_t get_n_activated() const {
+    return boost::range::count_if(
+        activated, [this](auto b) { return b == true; });
+  }
+
   VertexList get_monitored_set(std::map<Vertex, double> &s,
                                std::map<Edge, double> &w);
 
