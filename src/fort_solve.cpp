@@ -154,21 +154,22 @@ private:
     // Copy solution
     Pds newSolution(input);
 
-    // Get unactivated set
-    std::vector<Vertex> unActivatedSet;
-    newSolution.get_unactivated_set(unActivatedSet);
+    // Get blank vertices
+    // Unmonitored or unactivated?
+    std::vector<Vertex> blank;
+    newSolution.get_unmonitored_set(blank);
 
-    // Shuffle unactivated set
-    boost::range::random_shuffle(unActivatedSet);
+    // Shuffle blank set
+    boost::range::random_shuffle(blank);
 
-    // Preselect random neighbors for unactivated vertices
+    // Preselect random neighbors for blank vertices
     std::map<Vertex, std::vector<Vertex>> neighbors;
-    for (Vertex v : unActivatedSet) {
+    for (Vertex v : blank) {
       neighbors[v] = std::vector<Vertex>();
       boost::copy(adjacent_vertices(v, graph) |
-                      boost::adaptors::filtered([unActivatedSet](auto v) {
-                        return boost::range::find(unActivatedSet, v) !=
-                               unActivatedSet.end();
+                      boost::adaptors::filtered([blank](auto v) {
+                        return boost::range::find(blank, v) !=
+                               blank.end();
                       }),
                   std::back_inserter(neighbors[v]));
       size_t k = std::min(neighbors[v].size(), n_channels - 1);
@@ -178,14 +179,14 @@ private:
       }
     }
 
-    // Activate all unactivated vertices
+    // Activate all blank vertices
     // (propagation is unnecessary here)
     std::list<Vertex> trash;
-    for (Vertex v : unActivatedSet)
+    for (Vertex v : blank)
       newSolution.activate(v, neighbors[v], trash, trash);
 
     // MINIMISE FEASIBLE SOLUTION
-    for (Vertex v : unActivatedSet) {
+    for (Vertex v : blank) {
 
       if (forts.size() >= fortsLimit)
         break;
