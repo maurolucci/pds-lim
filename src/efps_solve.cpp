@@ -109,9 +109,6 @@ struct LazyEfpsCB : public GRBCallback {
       }
     }
 
-    // Turn-off heuristics
-    model.set(GRB_DoubleParam_Heuristics, 0.0);
-
     build_prec2props_map();
   }
 
