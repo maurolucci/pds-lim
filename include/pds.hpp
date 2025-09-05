@@ -54,7 +54,8 @@ private:
   size_t n_channels;
   VertexList activated;
   VertexList monitoredSet;
-  std::vector<std::set<Vertex>> observers;
+  std::vector<std::vector<bool>> observed_by; // observed_by[u][v]: is u observed by v?
+  std::vector<size_t> n_observers;
   std::map<Vertex, Vertex> propagates;
   std::map<Vertex, Vertex> propagator;
   PrecedenceDigraph digraph;
