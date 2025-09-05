@@ -65,7 +65,7 @@ struct LazyFortCB : public GRBCallback {
     }
 
     // Turn-off presolve
-    model.set(GRB_DoubleParam_Heuristics, 0.0);
+    model.set(GRB_IntParam_RINS, 0);
   }
 
   SolveResult solve(boost::optional<std::string> logPath, double timeLimit) {
@@ -154,21 +154,21 @@ private:
     // Copy solution
     Pds newSolution(input);
 
-    // Get unmonitored set
-    std::vector<Vertex> unmonitoredSet;
-    newSolution.get_unactivated_set(unmonitoredSet);
+    // Get unactivated set
+    std::vector<Vertex> unActivatedSet;
+    newSolution.get_unactivated_set(unActivatedSet);
 
-    // Shuffle unmonitored set
-    boost::range::random_shuffle(unmonitoredSet);
+    // Shuffle unactivated set
+    boost::range::random_shuffle(unActivatedSet);
 
-    // Preselect random neighbors for unmonitored vertices
+    // Preselect random neighbors for unactivated vertices
     std::map<Vertex, std::vector<Vertex>> neighbors;
-    for (Vertex v : unmonitoredSet) {
+    for (Vertex v : unActivatedSet) {
       neighbors[v] = std::vector<Vertex>();
       boost::copy(adjacent_vertices(v, graph) |
-                      boost::adaptors::filtered([unmonitoredSet](auto v) {
-                        return boost::range::find(unmonitoredSet, v) !=
-                               unmonitoredSet.end();
+                      boost::adaptors::filtered([unActivatedSet](auto v) {
+                        return boost::range::find(unActivatedSet, v) !=
+                               unActivatedSet.end();
                       }),
                   std::back_inserter(neighbors[v]));
       size_t k = std::min(neighbors[v].size(), n_channels - 1);
@@ -178,14 +178,14 @@ private:
       }
     }
 
-    // Activate all unmonitored vertices
+    // Activate all unactivated vertices
     // (propagation is unnecessary here)
     std::list<Vertex> trash;
-    for (Vertex v : unmonitoredSet)
+    for (Vertex v : unActivatedSet)
       newSolution.activate(v, neighbors[v], trash, trash);
 
     // MINIMISE FEASIBLE SOLUTION
-    for (Vertex v : unmonitoredSet) {
+    for (Vertex v : unActivatedSet) {
 
       if (forts.size() >= fortsLimit)
         break;
