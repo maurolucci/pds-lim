@@ -12,6 +12,8 @@ Pds::Pds(PowerGrid &&graph, size_t n_channels)
       n_channels(n_channels),
       activated(num_vertices(graph), false),
       monitoredSet(num_vertices(graph), false),
+      n_monitored(0),
+      n_adj_monitored(num_vertices(graph), 0),
       observed_by(num_vertices(graph),
                std::vector<bool>(num_vertices(graph), false)),
       n_observers(num_vertices(graph), 0),
@@ -64,6 +66,7 @@ void Pds::activate(Vertex v, std::vector<Vertex> &neighbors,
     activated[v] = true;
     if (n_observers[v] == 0) {
       monitoredSet[v] = true;
+      n_monitored++;
       turnedOn.push_back(v);
       observed_by[v][v] = true;   // observe before despropagating
       n_observers[v]++;
@@ -89,6 +92,7 @@ void Pds::deactivate(Vertex v, std::list<Vertex> &turnedOff) {
   n_observers[v]--;
   if (n_observers[v] == 0) {
     monitoredSet[v] = false;
+    n_monitored--;
     turnedOff.push_back(v);
     despropagate_from(v, turnedOff);
   }
@@ -101,6 +105,7 @@ void Pds::activate_neighbor(Vertex from, Vertex to, std::list<Vertex> &turnedOn,
   if (observed_by[to][from]) return;
   if (n_observers[to] == 0) {
     monitoredSet[to] = true;
+    n_monitored++;
     observed_by[to][from] = true;  // observe before despropagating
     n_observers[to]++;
     despropagate_to(to, turnedOff);
@@ -119,6 +124,7 @@ void Pds::deactivate_neighbor(Vertex from, Vertex to,
   n_observers[to]--;
   if (n_observers[to] == 0) {
     monitoredSet[to] = false;
+    n_monitored--;
     turnedOff.push_back(to);
     despropagate_from(to, turnedOff);
   }
@@ -157,6 +163,7 @@ void Pds::despropagate_from(Vertex v, std::list<Vertex> &turnedOff) {
 void Pds::despropagate(Vertex from, Vertex to, std::list<Vertex> &turnedOff) {
   if (n_observers[to] == 0) {
     monitoredSet[to] = false;
+    n_monitored--;
     turnedOff.push_back(to);
   }
   propagates[from] = -1;
@@ -226,6 +233,7 @@ void Pds::propagate_from(std::list<Vertex> &candidates,
 
 void Pds::propagate(Vertex from, Vertex to, std::list<Vertex> &turnedOn) {
   monitoredSet[to] = true;
+  n_monitored++;
   turnedOn.push_back(to);
   propagates[from] = to;
   propagator[to] = from;

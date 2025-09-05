@@ -54,6 +54,8 @@ private:
   size_t n_channels;
   VertexList activated;
   VertexList monitoredSet;
+  size_t n_monitored;
+  std::vector<size_t> n_adj_monitored;
   std::vector<std::vector<bool>> observed_by; // observed_by[u][v]: is u observed by v?
   std::vector<size_t> n_observers;
   std::vector<int> propagates;
@@ -114,9 +116,7 @@ public:
   }
 
   [[nodiscard]] inline bool isFeasible() const {
-    return boost::range::count_if(vertices(graph), [this](auto u) {
-             return monitoredSet[u];
-           }) == static_cast<std::ptrdiff_t>(boost::num_vertices(graph));
+    return n_monitored == boost::num_vertices(graph);
   }
 
   void activate(Vertex v, std::vector<Vertex> &neighbors, 
