@@ -82,7 +82,7 @@ struct LazyFortCB : public GRBCallback {
     // incumbent)
     case GRB_CB_MIPSOL:
 
-      std::cout << getIntInfo(MIPSOL_PHASE) << std::endl;
+      std::cout << getIntInfo(GRB_CB_MIPSOL_PHASE) << std::endl;
 
       auto t0 = std::chrono::high_resolution_clock::now();
       totalCallback++;
