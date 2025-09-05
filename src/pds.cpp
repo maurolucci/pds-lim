@@ -14,7 +14,9 @@ Pds::Pds(PowerGrid &&graph, size_t n_channels)
       monitoredSet(num_vertices(graph), false),
       observed_by(num_vertices(graph),
                std::vector<bool>(num_vertices(graph), false)),
-      n_observers(num_vertices(graph), 0) {
+      n_observers(num_vertices(graph), 0),
+      propagates(num_vertices(graph), -1),
+      propagator(num_vertices(graph), -1) {
   for (auto v : boost::make_iterator_range(vertices(graph)))
     add_vertex(LabelledVertex{.label = v}, digraph);
 }
@@ -123,9 +125,8 @@ void Pds::deactivate_neighbor(Vertex from, Vertex to,
 }
 
 void Pds::despropagate_to(Vertex to, std::list<Vertex> &turnedOff) {
-  auto it = propagator.find(to);
-  if (it == propagator.end()) return;
-  despropagate(it->second, to, turnedOff);
+  if (propagator[to] == -1) return;
+  despropagate(propagator[to], to, turnedOff);
 }
 
 void Pds::despropagate_from(Vertex v, std::list<Vertex> &turnedOff) {
@@ -136,7 +137,7 @@ void Pds::despropagate_from(Vertex v, std::list<Vertex> &turnedOff) {
     candidates.pop_front();
 
     // u cannot propagate anymore
-    if (propagates.contains(u)) {
+    if (propagates[u] != -1) {
       Vertex v = propagates[u];
       despropagate(u, v, turnedOff);
       candidates.push_back(v);
@@ -158,8 +159,8 @@ void Pds::despropagate(Vertex from, Vertex to, std::list<Vertex> &turnedOff) {
     monitoredSet[to] = false;
     turnedOff.push_back(to);
   }
-  propagates.erase(from);
-  propagator.erase(to);
+  propagates[from] = -1;
+  propagator[to] = -1;
   remove_edge(from, to, digraph);
   for (auto y : boost::make_iterator_range(adjacent_vertices(from, graph)))
     if (y != to) remove_edge(y, to, digraph);
@@ -185,7 +186,7 @@ bool Pds::try_propagation_from(Vertex v, std::list<Vertex> &turnedOn) {
 
 bool Pds::check_propagation(Vertex from, Vertex to) {
   if (monitoredSet[to] || !monitoredSet[from] || !isZeroInjection(from) ||
-      propagates.contains(from))
+      propagates[from])
     return false;
   size_t count = boost::range::count_if(
       adjacent_vertices(from, graph),

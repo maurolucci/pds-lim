@@ -56,8 +56,8 @@ private:
   VertexList monitoredSet;
   std::vector<std::vector<bool>> observed_by; // observed_by[u][v]: is u observed by v?
   std::vector<size_t> n_observers;
-  std::map<Vertex, Vertex> propagates;
-  std::map<Vertex, Vertex> propagator;
+  std::vector<int> propagates;
+  std::vector<int> propagator;
   PrecedenceDigraph digraph;
 
   void activate_neighbor(Vertex from, Vertex to, std::list<Vertex> &turnedOn, std::list<Vertex> &turnedOff);
