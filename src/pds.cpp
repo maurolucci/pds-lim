@@ -66,9 +66,10 @@ void Pds::activate(Vertex v, std::vector<Vertex> &neighbors,
       observed_by[v][v] = true;  // observe before despropagating
       n_observers[v]++;
       despropagate_to(v, turnedOff);
-    } else
+    } else {
       observed_by[v][v] = true;
       n_observers[v]++;
+    }
   }
   for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph))) {
     if (std::find(neighbors.begin(), neighbors.end(), u) != neighbors.end())
