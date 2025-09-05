@@ -158,6 +158,8 @@ private:
     std::vector<Vertex> unmonitoredSet;
     newSolution.get_unmonitored_set(unmonitoredSet);
 
+    std::cout << "No monitoreados: " << unmonitoredSet.size() << std::endl;
+
     // Shuffle unmonitored set
     boost::range::random_shuffle(unmonitoredSet);
 
