@@ -67,6 +67,8 @@ void Pds::activate(Vertex v, std::vector<Vertex> &neighbors,
     if (n_observers[v] == 0) {
       monitoredSet[v] = true;
       n_monitored++;
+      for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
+        n_adj_monitored[u]++;
       turnedOn.push_back(v);
       observed_by[v][v] = true;   // observe before despropagating
       n_observers[v]++;
@@ -93,6 +95,8 @@ void Pds::deactivate(Vertex v, std::list<Vertex> &turnedOff) {
   if (n_observers[v] == 0) {
     monitoredSet[v] = false;
     n_monitored--;
+    for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
+      n_adj_monitored[u]--;
     turnedOff.push_back(v);
     despropagate_from(v, turnedOff);
   }
@@ -106,6 +110,8 @@ void Pds::activate_neighbor(Vertex from, Vertex to, std::list<Vertex> &turnedOn,
   if (n_observers[to] == 0) {
     monitoredSet[to] = true;
     n_monitored++;
+    for (auto u : boost::make_iterator_range(adjacent_vertices(to, graph)))
+      n_adj_monitored[u]++;
     observed_by[to][from] = true;  // observe before despropagating
     n_observers[to]++;
     despropagate_to(to, turnedOff);
@@ -125,6 +131,8 @@ void Pds::deactivate_neighbor(Vertex from, Vertex to,
   if (n_observers[to] == 0) {
     monitoredSet[to] = false;
     n_monitored--;
+    for (auto u : boost::make_iterator_range(adjacent_vertices(to, graph)))
+      n_adj_monitored[u]--;
     turnedOff.push_back(to);
     despropagate_from(to, turnedOff);
   }
@@ -164,6 +172,8 @@ void Pds::despropagate(Vertex from, Vertex to, std::list<Vertex> &turnedOff) {
   if (n_observers[to] == 0) {
     monitoredSet[to] = false;
     n_monitored--;
+    for (auto u : boost::make_iterator_range(adjacent_vertices(to, graph)))
+      n_adj_monitored[u]--;
     turnedOff.push_back(to);
   }
   propagates[from] = -1;
@@ -193,12 +203,9 @@ bool Pds::try_propagation_from(Vertex v, std::list<Vertex> &turnedOn) {
 
 bool Pds::check_propagation(Vertex from, Vertex to) {
   if (monitoredSet[to] || !monitoredSet[from] || !isZeroInjection(from) ||
-      propagates[from])
+      propagates[from] || n_adj_monitored[from] - 1 != degree(from, graph))
     return false;
-  size_t count = boost::range::count_if(
-      adjacent_vertices(from, graph),
-      [this, to](auto v) { return v != to && monitoredSet[v]; });
-  return (degree(from, graph) - count == 1);
+  return true;
 }
 
 void Pds::propagate_to(std::list<Vertex> &candidates,
@@ -234,6 +241,8 @@ void Pds::propagate_from(std::list<Vertex> &candidates,
 void Pds::propagate(Vertex from, Vertex to, std::list<Vertex> &turnedOn) {
   monitoredSet[to] = true;
   n_monitored++;
+  for (auto u : boost::make_iterator_range(adjacent_vertices(to, graph)))
+    n_adj_monitored[u]++;
   turnedOn.push_back(to);
   propagates[from] = to;
   propagator[to] = from;
