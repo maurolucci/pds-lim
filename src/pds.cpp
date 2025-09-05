@@ -60,12 +60,16 @@ void Pds::activate(Vertex v, std::vector<Vertex> &neighbors,
                    std::list<Vertex> &turnedOn, std::list<Vertex> &turnedOff) {
   if (!activated[v]) {
     activated[v] = true;
-    observed_by[v][v] = true;   // observe before despropagating
-    n_observers[v]++;
     if (n_observers[v] == 0) {
       monitoredSet[v] = true;
       turnedOn.push_back(v);
+      observed_by[v][v] = true;   // observe before despropagating
+      n_observers[v]++;
       despropagate_to(v, turnedOff);
+    }
+    else {
+      observed_by[v][v] = true;
+      n_observers[v]++;
     }
   }
   for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph))) {
@@ -79,10 +83,8 @@ void Pds::activate(Vertex v, std::vector<Vertex> &neighbors,
 void Pds::deactivate(Vertex v, std::list<Vertex> &turnedOff) {
   if (!activated[v]) return;
   activated[v] = false;
-  if (observed_by[v][v]) {
-    observed_by[v][v] = false;
-    n_observers[v]--;
-  }
+  observed_by[v][v] = false;
+  n_observers[v]--;
   if (n_observers[v] == 0) {
     monitoredSet[v] = false;
     turnedOff.push_back(v);
@@ -95,12 +97,16 @@ void Pds::deactivate(Vertex v, std::list<Vertex> &turnedOff) {
 void Pds::activate_neighbor(Vertex from, Vertex to, std::list<Vertex> &turnedOn,
                             std::list<Vertex> &turnedOff) {
   if (observed_by[to][from]) return;
-  observed_by[to][from] = true;  // observe before despropagating
-  n_observers[to]++;
   if (n_observers[to] == 0) {
     monitoredSet[to] = true;
+    observed_by[to][from] = true;  // observe before despropagating
+    n_observers[to]++;
     despropagate_to(to, turnedOff);
     turnedOn.push_back(to);
+  }
+  else {
+    observed_by[to][from] = true;
+    n_observers[to]++;
   }
 }
 
