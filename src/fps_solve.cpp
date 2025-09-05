@@ -163,9 +163,6 @@ struct LazyFpsCB : public GRBCallback {
           }
       }
     }
-    
-    // Turn-off heuristics
-    model.set(GRB_DoubleParam_Heuristics, 0.0);
 
   }
 
