@@ -54,12 +54,9 @@ private:
   size_t n_channels;
   VertexList activated;
   VertexList monitoredSet;
-  size_t n_monitored;
-  std::vector<size_t> n_adj_monitored;
-  std::vector<std::vector<bool>> observed_by; // observed_by[u][v]: is u observed by v?
-  std::vector<size_t> n_observers;
-  std::vector<int> propagates;
-  std::vector<int> propagator;
+  std::vector<std::set<Vertex>> observers;
+  std::map<Vertex, Vertex> propagates;
+  std::map<Vertex, Vertex> propagator;
   PrecedenceDigraph digraph;
 
   void activate_neighbor(Vertex from, Vertex to, std::list<Vertex> &turnedOn, std::list<Vertex> &turnedOff);
@@ -107,7 +104,7 @@ public:
   VertexList get_monitored_set(std::map<Vertex, double> &s,
                                std::map<Edge, double> &w);
 
-  [[nodiscard]] inline size_t get_n_monitored() const {return n_monitored;}
+  // [[nodiscard]] inline size_t get_n_monitored() const {return n_monitored;}
 
   inline void get_unmonitored_set(std::vector<Vertex> &vec) const {
     boost::copy(vertices(graph) |
@@ -123,7 +120,9 @@ public:
   }
 
   [[nodiscard]] inline bool isFeasible() const {
-    return n_monitored == boost::num_vertices(graph);
+    return boost::range::count_if(vertices(graph), [this](auto u) {
+             return monitoredSet[u];
+           }) == static_cast<std::ptrdiff_t>(boost::num_vertices(graph));
   }
 
   void activate(Vertex v, std::vector<Vertex> &neighbors, 
