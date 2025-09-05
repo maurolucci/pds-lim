@@ -63,6 +63,9 @@ struct LazyFortCB : public GRBCallback {
                         std::min(degree(v, graph), (n_channels - 1)) * s.at(v));
       }
     }
+
+    // Turn-off presolve
+    model.set(GRB_IntParam_PrePasses, 0);
   }
 
   SolveResult solve(boost::optional<std::string> logPath, double timeLimit) {
@@ -81,8 +84,6 @@ struct LazyFortCB : public GRBCallback {
     // Integer solution founded (it does not necessarily improve the
     // incumbent)
     case GRB_CB_MIPSOL:
-
-      std::cout << getDoubleInfo(GRB_CB_MIPSOL_OBJ) << std::endl;
 
       auto t0 = std::chrono::high_resolution_clock::now();
       totalCallback++;
