@@ -102,6 +102,8 @@ public:
   VertexList get_monitored_set(std::map<Vertex, double> &s,
                                std::map<Edge, double> &w);
 
+  [[nodiscard]] inline size_t get_n_monitored() const {return n_monitored;}
+
   inline void get_unmonitored_set(std::vector<Vertex> &vec) const {
     boost::copy(vertices(graph) |
                     boost::adaptors::filtered(
