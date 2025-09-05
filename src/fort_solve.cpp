@@ -156,9 +156,7 @@ private:
 
     // Get unmonitored set
     std::vector<Vertex> unmonitoredSet;
-    newSolution.get_unmonitored_set(unmonitoredSet);
-
-    std::cout << "blank: " << num_vertices(graph) - input.get_n_activated() << std::endl;
+    newSolution.get_unactivated_set(unmonitoredSet);
 
     // Shuffle unmonitored set
     boost::range::random_shuffle(unmonitoredSet);

@@ -113,6 +113,13 @@ public:
                 std::back_inserter(vec));
   }
 
+  inline void get_unactivated_set(std::vector<Vertex> &vec) const {
+    boost::copy(vertices(graph) |
+                    boost::adaptors::filtered(
+                        [this](auto v) { return !activated[v]; }),
+                std::back_inserter(vec));
+  }
+
   [[nodiscard]] inline bool isFeasible(VertexList &mS) const {
     return boost::range::count_if(vertices(graph), [mS](auto u) {
              return mS[u];
