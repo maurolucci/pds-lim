@@ -65,7 +65,7 @@ struct LazyFortCB : public GRBCallback {
     }
 
     // Turn-off presolve
-    model.set(GRB_IntParam_PrePasses, 0);
+    model.set(GRB_IntParam_Presolve, 0);
   }
 
   SolveResult solve(boost::optional<std::string> logPath, double timeLimit) {
