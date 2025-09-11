@@ -6,9 +6,9 @@ SRCPATH = src
 INCPATH = include
 DEPPATH = _deps
 
-LIBS   = -L/opt/gurobi1103/linux64/lib -lgurobi_c++ -lgurobi110 -L/usr/lib/x86_64-linux-gnu -lboost_program_options
+LIBS   = -L/opt/gurobi1203/linux64/lib -lgurobi_c++ -lgurobi120 -L/usr/lib/x86_64-linux-gnu -lboost_program_options
 DEPS = $(DEPPATH)/tinyxml2/CMakeFiles/tinyxml2.dir/tinyxml2.cpp.o $(DEPPATH)/fmt/CMakeFiles/fmt.dir/src/format.cc.o
-INCS = -I$(INCPATH) -I$(DEPPATH)/fmt/include -I$(DEPPATH)/tinyxml2 -I/opt/gurobi1103/linux64/include
+INCS = -I$(INCPATH) -I$(DEPPATH)/fmt/include -I$(DEPPATH)/tinyxml2 -I/opt/gurobi1203/linux64/include
 
 FLAGS = -Wall -Wextra -O3
 
