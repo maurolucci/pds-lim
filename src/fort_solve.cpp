@@ -166,11 +166,7 @@ private:
     std::map<Vertex, std::vector<Vertex>> neighbors;
     for (Vertex v : blank) {
       neighbors[v] = std::vector<Vertex>();
-      boost::copy(adjacent_vertices(v, graph) |
-                      boost::adaptors::filtered([blank](auto v) {
-                        return boost::range::find(blank, v) !=
-                               blank.end();
-                      }),
+      boost::copy(adjacent_vertices(v, graph),
                   std::back_inserter(neighbors[v]));
       size_t k = std::min(neighbors[v].size(), n_channels - 1);
       if (k < neighbors[v].size()) {
