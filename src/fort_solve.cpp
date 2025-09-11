@@ -184,7 +184,7 @@ private:
 
     // Activate all blank vertices
     // (propagation is unnecessary here)
-    // std::list<Vertex> trash;
+    std::list<Vertex> trash;
     // for (Vertex v : blank)
     //   newSolution.activate(v, neighbors[v], trash, trash);
 

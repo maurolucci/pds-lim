@@ -112,8 +112,8 @@ void Pds::deactivate_neighbor(Vertex from, Vertex to,
 
 void Pds::activate_blank(std::vector<Vertex> &blank,
                          std::map<Vertex, std::vector<Vertex>> &neighbors) {
-      std::list<Vertex> trash;
-                          for (Vertex v : blank) {
+  std::list<Vertex> trash;
+  for (Vertex v : blank) {
     activated[v] = true;
     if (observers[v].empty()) {
       monitoredSet[v] = true;
@@ -122,7 +122,7 @@ void Pds::activate_blank(std::vector<Vertex> &blank,
     } else
       observers[v].insert(v);
 
-    for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph))) {
+    for (auto u : neighbors[v]) {
       if (observers[u].empty()) {
         monitoredSet[u] = true;
         observers[u].insert(v);  // observe before despropagating
