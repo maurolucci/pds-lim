@@ -118,7 +118,7 @@ void Pds::activate_blank(std::vector<Vertex> &blank,
     if (observers[v].empty()) {
       monitoredSet[v] = true;
       observers[v].insert(v);  // observe before despropagating
-      despropagate_to(v, trash);
+      //despropagate_to(v, trash);
     } else
       observers[v].insert(v);
 
@@ -126,7 +126,7 @@ void Pds::activate_blank(std::vector<Vertex> &blank,
       if (observers[u].empty()) {
         monitoredSet[u] = true;
         observers[u].insert(v);  // observe before despropagating
-        despropagate_to(u, trash);
+        //despropagate_to(u, trash);
       } else
         observers[u].insert(v);
     }
