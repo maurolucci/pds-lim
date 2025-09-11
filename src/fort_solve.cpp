@@ -94,7 +94,7 @@ struct LazyFortCB : public GRBCallback {
         if (getSolution(s.at(v)) < 0.5)
           input.deactivate(v, turnedOff);
       // Try propagation to turned off vertices
-      // input.propagate_to(turnedOff, turnedOn);
+      input.propagate_to(turnedOff, turnedOn);
 
       // Second activate vertices
       turnedOff.clear();
