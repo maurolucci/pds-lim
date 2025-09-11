@@ -185,10 +185,10 @@ private:
     // Activate all blank vertices
     // (propagation is unnecessary here)
     std::list<Vertex> trash;
-    // for (Vertex v : blank)
-    //   newSolution.activate(v, neighbors[v], trash, trash);
+    for (Vertex v : blank)
+      newSolution.activate(v, neighbors[v], trash, trash);
 
-    newSolution.activate_blank(blank, neighbors);
+    // newSolution.activate_blank(blank, neighbors);
 
     auto t1 = std::chrono::high_resolution_clock::now();
     std::cout << "Check point 1: " << std::chrono::duration_cast<std::chrono::microseconds>(t1 - t10).count() << std::endl;
