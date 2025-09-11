@@ -110,29 +110,6 @@ void Pds::deactivate_neighbor(Vertex from, Vertex to,
   }
 }
 
-void Pds::activate_blank(std::vector<Vertex> &blank,
-                         std::map<Vertex, std::vector<Vertex>> &neighbors) {
-  std::list<Vertex> trash;
-  for (Vertex v : blank) {
-    activated[v] = true;
-    if (observers[v].empty()) {
-      monitoredSet[v] = true;
-      observers[v].insert(v);  // observe before despropagating
-      //despropagate_to(v, trash);
-    } else
-      observers[v].insert(v);
-
-    for (auto u : neighbors[v]) {
-      if (observers[u].empty()) {
-        monitoredSet[u] = true;
-        observers[u].insert(v);  // observe before despropagating
-        //despropagate_to(u, trash);
-      } else
-        observers[u].insert(v);
-    }
-  }
-}
-
 void Pds::despropagate_to(Vertex to, std::list<Vertex> &turnedOff) {
   auto it = propagator.find(to);
   if (it == propagator.end()) return;

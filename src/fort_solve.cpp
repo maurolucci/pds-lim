@@ -147,8 +147,6 @@ struct LazyFortCB : public GRBCallback {
 private:
   std::set<Fort> violatedForts(size_t fortsLimit) {
 
-    auto t0 = std::chrono::high_resolution_clock::now();
-
     std::set<Fort> forts;
 
     // Copy solution
@@ -175,19 +173,11 @@ private:
       }
     }
 
-    auto t10 = std::chrono::high_resolution_clock::now();
-    std::cout << "Check point 0.5: " << std::chrono::duration_cast<std::chrono::microseconds>(t10-t0).count() << std::endl;
-
     // Activate all blank vertices
     // (propagation is unnecessary here)
     std::list<Vertex> trash;
     for (Vertex v : blank)
       newSolution.activate(v, neighbors[v], trash, trash);
-
-    // newSolution.activate_blank(blank, neighbors);
-
-    auto t1 = std::chrono::high_resolution_clock::now();
-    std::cout << "Check point 1: " << std::chrono::duration_cast<std::chrono::microseconds>(t1 - t10).count() << std::endl;
 
     // MINIMISE FEASIBLE SOLUTION
     for (Vertex v : blank) {
@@ -204,8 +194,6 @@ private:
 
       // Feasibility check
       if (!newSolution.isFeasible()) {
-
-        auto t0 = std::chrono::high_resolution_clock::now();
 
         // Find and insert fort
         forts.insert(findFort(newSolution));
@@ -225,8 +213,6 @@ private:
         }
         newSolution.propagate_from(candidates, trash);
 
-        auto t2 = std::chrono::high_resolution_clock::now();
-        std::cout << "Check point 2: " << std::chrono::duration_cast<std::chrono::microseconds>(t2 - t0).count() << std::endl;
       }
     }
 
