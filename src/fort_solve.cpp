@@ -104,7 +104,7 @@ struct LazyFortCB : public GRBCallback {
               if (degree(v, graph) <= input.get_n_channels() - 1 ||
                   getSolution(w.at(std::make_pair(v, u))) > 0.5)
                 dominate[i] = true;
-              input.activate(v, dominate);
+              input.activate2(v, dominate);
               ++i;
             }
           }
