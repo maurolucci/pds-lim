@@ -135,9 +135,9 @@ class Pds {
 
   void activate(Vertex v, std::vector<Vertex> &neighbors,
                 std::list<Vertex> &turnedOn, std::list<Vertex> &turnedOff);
-  void activate_blank(std::vector<Vertex> &blank,
-                      std::map<Vertex, std::vector<Vertex>> &neighbors);
+  void activate2(Vertex v, std::vector<bool> &dominate);
   void deactivate(Vertex v, std::list<Vertex> &turnedOff);
+  void deactivate2(Vertex v);
 
   void propagate_to(std::list<Vertex> &candidates, std::list<Vertex> &turnedOn);
   void propagate_from(std::list<Vertex> &candidates,

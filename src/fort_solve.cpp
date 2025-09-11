@@ -1,9 +1,11 @@
 #include "fort_solve.hpp"
-#include "gurobi_common.hpp"
+
+#include <gurobi_c++.h>
 
 #include <boost/range/adaptor/filtered.hpp>
 #include <chrono>
-#include <gurobi_c++.h>
+
+#include "gurobi_common.hpp"
 
 namespace pds {
 
@@ -12,7 +14,6 @@ using Fort = std::tuple<std::set<Vertex>, std::set<Vertex>, std::set<Edge>>;
 namespace {
 
 struct LazyFortCB : public GRBCallback {
-
   MIPModel mipmodel;
   GRBModel &model;
   std::map<pds::Vertex, GRBVar> &s;
@@ -31,13 +32,20 @@ struct LazyFortCB : public GRBCallback {
 
   LazyFortCB(Pds &input, std::ostream &callbackFile, std::ostream &solutionFile,
              size_t lzLimit)
-      : mipmodel(), model(*mipmodel.model), s(mipmodel.s), w(mipmodel.w), y(),
-        input(input), graph(input.get_graph()), cbFile(callbackFile),
-        solFile(solutionFile), n_channels(input.get_n_channels()),
-        lazyLimit(lzLimit), totalCallback(mipmodel.totalCallback),
+      : mipmodel(),
+        model(*mipmodel.model),
+        s(mipmodel.s),
+        w(mipmodel.w),
+        y(),
+        input(input),
+        graph(input.get_graph()),
+        cbFile(callbackFile),
+        solFile(solutionFile),
+        n_channels(input.get_n_channels()),
+        lazyLimit(lzLimit),
+        totalCallback(mipmodel.totalCallback),
         totalCallbackTime(mipmodel.totalCallbackTime),
         totalLazy(mipmodel.totalLazy) {
-
     model.setCallback(this);
 
     // Add variables
@@ -63,7 +71,6 @@ struct LazyFortCB : public GRBCallback {
                         std::min(degree(v, graph), (n_channels - 1)) * s.at(v));
       }
     }
-
   }
 
   SolveResult solve(boost::optional<std::string> logPath, double timeLimit) {
@@ -75,78 +82,93 @@ struct LazyFortCB : public GRBCallback {
   }
 
   void callback() override {
-
     switch (where) {
+      // MIP solution callback
+      // Integer solution founded (it does not necessarily improve the
+      // incumbent)
+      case GRB_CB_MIPSOL:
 
-    // MIP solution callback
-    // Integer solution founded (it does not necessarily improve the
-    // incumbent)
-    case GRB_CB_MIPSOL:
+        auto t0 = std::chrono::high_resolution_clock::now();
+        totalCallback++;
 
-      auto t0 = std::chrono::high_resolution_clock::now();
-      totalCallback++;
+        // Update solution
 
-      // Update solution
-
-      // First deactivate vertices
-      std::list<Vertex> turnedOff, turnedOn;
-      for (auto v : boost::make_iterator_range(vertices(graph)))
-        if (getSolution(s.at(v)) < 0.5)
-          input.deactivate(v, turnedOff);
-      // Try propagation to turned off vertices
-      input.propagate_to(turnedOff, turnedOn);
-
-      // Second activate vertices
-      turnedOff.clear();
-      for (auto v : boost::make_iterator_range(vertices(graph)))
-        if (getSolution(s.at(v)) > 0.5) {
-          std::vector<Vertex> neighbors;
-          for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
-            if (degree(v, graph) <= input.get_n_channels() - 1 ||
-                getSolution(w.at(std::make_pair(v, u))) > 0.5)
-              neighbors.push_back(u);
-          input.activate(v, neighbors, turnedOn, turnedOff);
+        for (auto v : boost::make_iterator_range(vertices(graph))) {
+          if (getSolution(s.at(v)) < 0.5)
+            input.deactivate2(v);
+          else {
+            std::vector<bool> dominate(degree(v, graph), false);
+            size_t i = 0;
+            for (auto u :
+                 boost::make_iterator_range(adjacent_vertices(v, graph))) {
+              if (degree(v, graph) <= input.get_n_channels() - 1 ||
+                  getSolution(w.at(std::make_pair(v, u))) > 0.5)
+                dominate[i] = true;
+              input.activate(v, dominate);
+              ++i;
+            }
+          }
         }
-      // Try propagation to turned off vertices
-      input.propagate_to(turnedOff, turnedOn);
-      // Try propagation from turned on vertices or their neighbors
-      std::list<Vertex> candidates;
-      for (auto u : turnedOn) {
-        if (input.isZeroInjection(u))
-          candidates.push_back(u);
-        for (auto y : boost::make_iterator_range(adjacent_vertices(u, graph)))
-          if (input.isZeroInjection(y) && input.isMonitored(y))
-            candidates.push_back(y);
-      }
-      input.propagate_from(candidates, turnedOn);
 
-      // Feasibility check
-      if (!input.isFeasible()) {
+        /*
+              // First deactivate vertices
+              std::list<Vertex> turnedOff, turnedOn;
+              for (auto v : boost::make_iterator_range(vertices(graph)))
+                if (getSolution(s.at(v)) < 0.5)
+                  input.deactivate(v, turnedOff);
+              // Try propagation to turned off vertices
+              input.propagate_to(turnedOff, turnedOn);
 
-        // Find violated forts
-        std::set<Fort> forts = violatedForts(lazyLimit);
-        std::pair<double, double> avg = addLazyForts(forts);
-        totalLazy += forts.size();
+              // Second activate vertices
+              turnedOff.clear();
+              for (auto v : boost::make_iterator_range(vertices(graph)))
+                if (getSolution(s.at(v)) > 0.5) {
+                  std::vector<Vertex> neighbors;
+                  for (auto u : boost::make_iterator_range(adjacent_vertices(v,
+           graph))) if (degree(v, graph) <= input.get_n_channels() - 1 ||
+                        getSolution(w.at(std::make_pair(v, u))) > 0.5)
+                      neighbors.push_back(u);
+                  input.activate(v, neighbors, turnedOn, turnedOff);
+                }
+              // Try propagation to turned off vertices
+              input.propagate_to(turnedOff, turnedOn);
+              // Try propagation from turned on vertices or their neighbors
+              std::list<Vertex> candidates;
+              for (auto u : turnedOn) {
+                if (input.isZeroInjection(u))
+                  candidates.push_back(u);
+                for (auto y : boost::make_iterator_range(adjacent_vertices(u,
+           graph))) if (input.isZeroInjection(y) && input.isMonitored(y))
+                    candidates.push_back(y);
+              }
+              input.propagate_from(candidates, turnedOn);
+        */
+        // Feasibility check
+        if (!input.isFeasible()) {
+          // Find violated forts
+          std::set<Fort> forts = violatedForts(lazyLimit);
+          std::pair<double, double> avg = addLazyForts(forts);
+          totalLazy += forts.size();
 
-        // Report to callback file
-        cbFile << fmt::format("# forts: {}, avg. vertex size: {:.2f}, avg. "
-                              "edge size: {:.2f}",
-                              forts.size(), avg.first, avg.second)
-               << std::endl;
-      }
+          // Report to callback file
+          cbFile << fmt::format(
+                        "# forts: {}, avg. vertex size: {:.2f}, avg. "
+                        "edge size: {:.2f}",
+                        forts.size(), avg.first, avg.second)
+                 << std::endl;
+        }
 
-      auto t1 = std::chrono::high_resolution_clock::now();
-      totalCallbackTime +=
-          std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0)
-              .count();
+        auto t1 = std::chrono::high_resolution_clock::now();
+        totalCallbackTime +=
+            std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0)
+                .count();
 
-      break;
+        break;
     }
   }
 
-private:
+ private:
   std::set<Fort> violatedForts(size_t fortsLimit) {
-
     std::set<Fort> forts;
 
     // Copy solution
@@ -176,14 +198,11 @@ private:
     // Activate all blank vertices
     // (propagation is unnecessary here)
     std::list<Vertex> trash;
-    for (Vertex v : blank)
-      newSolution.activate(v, neighbors[v], trash, trash);
+    for (Vertex v : blank) newSolution.activate(v, neighbors[v], trash, trash);
 
     // MINIMISE FEASIBLE SOLUTION
     for (Vertex v : blank) {
-
-      if (forts.size() >= fortsLimit)
-        break;
+      if (forts.size() >= fortsLimit) break;
 
       // Deactivate v
       std::list<Vertex> turnedOff;
@@ -194,7 +213,6 @@ private:
 
       // Feasibility check
       if (!newSolution.isFeasible()) {
-
         // Find and insert fort
         forts.insert(findFort(newSolution));
 
@@ -205,14 +223,12 @@ private:
         // Try propagations from changed vertices or their neighbors
         std::list<Vertex> candidates;
         for (auto u : turnedOn) {
-          if (newSolution.isZeroInjection(u))
-            candidates.push_back(u);
+          if (newSolution.isZeroInjection(u)) candidates.push_back(u);
           for (auto y : boost::make_iterator_range(adjacent_vertices(u, graph)))
             if (newSolution.isZeroInjection(y) && newSolution.isMonitored(y))
               candidates.push_back(y);
         }
         newSolution.propagate_from(candidates, trash);
-
       }
     }
 
@@ -235,12 +251,10 @@ private:
   Fort findFort(Pds &input) {
     Fort fort;
     for (auto u : boost::make_iterator_range(vertices(graph))) {
-      if (input.isMonitored(u))
-        continue;
+      if (input.isMonitored(u)) continue;
       std::get<0>(fort).insert(u);
       for (auto z : boost::make_iterator_range(adjacent_vertices(u, graph))) {
-        if (!input.isMonitored(z))
-          continue;
+        if (!input.isMonitored(z)) continue;
         if (degree(z, graph) <= input.get_n_channels() - 1)
           std::get<1>(fort).insert(z);
         else
@@ -251,7 +265,6 @@ private:
   }
 
   std::pair<double, double> addLazyForts(std::set<Fort> forts) {
-
     size_t accumVertices = 0;
     size_t accumEdges = 0;
 
@@ -276,7 +289,7 @@ private:
                           static_cast<double>(accumEdges) / forts.size());
   }
 };
-} // namespace
+}  // namespace
 
 SolveResult solveLazyForts(Pds &input, boost::optional<std::string> logPath,
                            std::ostream &callbackFile, std::ostream &solFile,
@@ -285,4 +298,4 @@ SolveResult solveLazyForts(Pds &input, boost::optional<std::string> logPath,
   return lazyForts.solve(logPath, timeLimit);
 }
 
-} // end of namespace pds
+}  // end of namespace pds

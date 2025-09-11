@@ -54,6 +54,87 @@ VertexList Pds::get_monitored_set(std::map<Vertex, double> &s,
   return monitored;
 }
 
+void Pds::activate2(Vertex v, std::vector<bool> &dominate) {
+
+  bool act = activated[v];
+  std::list<Vertex> turnedOn;
+  std::list<Vertex> turnedOff;
+
+  // Activate v
+  if (!activated[v]) {
+    activated[v] = true;
+    if (observers[v].empty()) {
+      monitoredSet[v] = true;
+      turnedOn.push_back(v);
+      observers[v].insert(v);  // observe before despropagating
+      despropagate_to(v, turnedOff);
+    } else
+      observers[v].insert(v);
+  }
+
+  // Dominate or desdominate neighbors
+  size_t i = 0;
+  for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph))) {
+    // Dominate
+    if (dominate[i] && !observers[u].contains(v)) {
+      if (observers[u].empty()) {
+        monitoredSet[u] = true;
+        turnedOn.push_back(u);
+        observers[u].insert(v);  // observe before despropagating
+        despropagate_to(u, turnedOff);
+      } else
+        observers[u].insert(v);
+    }
+    // Desdominate
+    else if (act && !dominate[i] && observers[u].contains(v)) {
+      observers[u].erase(v);
+      if (observers[u].empty()) {
+        monitoredSet[u] = false;
+        despropagate_from(u, turnedOff);
+      }
+    }
+    ++i;
+  }
+
+  // Try propagations to turned off vertices
+  propagate_to(turnedOff, turnedOn);
+
+  // Try propagations from turned on vertices, or their neighbors,
+  // as long as they are propagating and monitored
+  std::list<Vertex> candidates;
+  for (auto u : turnedOn) {
+    if (isZeroInjection(u)) candidates.push_back(u);
+    for (auto y : boost::make_iterator_range(adjacent_vertices(u, graph)))
+      if (isZeroInjection(y) && isMonitored(y)) candidates.push_back(y);
+  }
+  propagate_from(candidates, turnedOn);
+}
+
+void Pds::deactivate2(Vertex v) {
+  
+  if (!activated[v]) return;
+
+  std::list<Vertex> turnedOn;
+  std::list<Vertex> turnedOff;
+
+  // Deactivate v
+  activated[v] = false;
+  observers[v].erase(v);
+  if (observers[v].empty()) {
+    monitoredSet[v] = false;
+    turnedOff.push_back(v);
+    despropagate_from(v, turnedOff);
+  }
+
+  // Desdominate neighbors 
+  for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
+    deactivate_neighbor(v, u, turnedOff);
+
+  // Try propagations to turned off vertices
+  propagate_to(turnedOff, turnedOn);
+}
+
+
 void Pds::activate(Vertex v, std::vector<Vertex> &neighbors,
                    std::list<Vertex> &turnedOn, std::list<Vertex> &turnedOff) {
   if (!activated[v]) {
