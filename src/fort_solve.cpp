@@ -93,56 +93,54 @@ struct LazyFortCB : public GRBCallback {
 
         // Update solution
 
-        for (auto v : boost::make_iterator_range(vertices(graph))) {
-          if (getSolution(s.at(v)) < 0.5)
-            input.deactivate2(v);
-          else {
-            std::vector<bool> dominate(degree(v, graph), false);
-            size_t i = 0;
+        // for (auto v : boost::make_iterator_range(vertices(graph))) {
+        //   if (getSolution(s.at(v)) < 0.5)
+        //     input.deactivate2(v);
+        //   else {
+        //     std::vector<bool> dominate(degree(v, graph), false);
+        //     size_t i = 0;
+        //     for (auto u :
+        //          boost::make_iterator_range(adjacent_vertices(v, graph))) {
+        //       if (degree(v, graph) <= input.get_n_channels() - 1 ||
+        //           getSolution(w.at(std::make_pair(v, u))) > 0.5)
+        //         dominate[i] = true;
+        //       ++i;
+        //     }
+        //     input.activate2(v, dominate);
+        //   }
+        // }
+
+        // First deactivate vertices
+        std::list<Vertex> turnedOff, turnedOn;
+        for (auto v : boost::make_iterator_range(vertices(graph)))
+          if (getSolution(s.at(v)) < 0.5) input.deactivate(v, turnedOff);
+        // Try propagation to turned off vertices
+        input.propagate_to(turnedOff, turnedOn);
+
+        // Second activate vertices
+        turnedOff.clear();
+        for (auto v : boost::make_iterator_range(vertices(graph)))
+          if (getSolution(s.at(v)) > 0.5) {
+            std::vector<Vertex> neighbors;
             for (auto u :
-                 boost::make_iterator_range(adjacent_vertices(v, graph))) {
+                 boost::make_iterator_range(adjacent_vertices(v, graph)))
               if (degree(v, graph) <= input.get_n_channels() - 1 ||
                   getSolution(w.at(std::make_pair(v, u))) > 0.5)
-                dominate[i] = true;
-              ++i;
-            }
-            input.activate2(v, dominate);
+                neighbors.push_back(u);
+            input.activate(v, neighbors, turnedOn, turnedOff);
           }
+        // Try propagation to turned off vertices
+        input.propagate_to(turnedOff, turnedOn);
+        // Try propagation from turned on vertices or their neighbors
+        std::list<Vertex> candidates;
+        for (auto u : turnedOn) {
+          if (input.isZeroInjection(u)) candidates.push_back(u);
+          for (auto y : boost::make_iterator_range(adjacent_vertices(u, graph)))
+            if (input.isZeroInjection(y) && input.isMonitored(y))
+              candidates.push_back(y);
         }
+        input.propagate_from(candidates, turnedOn);
 
-        /*
-              // First deactivate vertices
-              std::list<Vertex> turnedOff, turnedOn;
-              for (auto v : boost::make_iterator_range(vertices(graph)))
-                if (getSolution(s.at(v)) < 0.5)
-                  input.deactivate(v, turnedOff);
-              // Try propagation to turned off vertices
-              input.propagate_to(turnedOff, turnedOn);
-
-              // Second activate vertices
-              turnedOff.clear();
-              for (auto v : boost::make_iterator_range(vertices(graph)))
-                if (getSolution(s.at(v)) > 0.5) {
-                  std::vector<Vertex> neighbors;
-                  for (auto u : boost::make_iterator_range(adjacent_vertices(v,
-           graph))) if (degree(v, graph) <= input.get_n_channels() - 1 ||
-                        getSolution(w.at(std::make_pair(v, u))) > 0.5)
-                      neighbors.push_back(u);
-                  input.activate(v, neighbors, turnedOn, turnedOff);
-                }
-              // Try propagation to turned off vertices
-              input.propagate_to(turnedOff, turnedOn);
-              // Try propagation from turned on vertices or their neighbors
-              std::list<Vertex> candidates;
-              for (auto u : turnedOn) {
-                if (input.isZeroInjection(u))
-                  candidates.push_back(u);
-                for (auto y : boost::make_iterator_range(adjacent_vertices(u,
-           graph))) if (input.isZeroInjection(y) && input.isMonitored(y))
-                    candidates.push_back(y);
-              }
-              input.propagate_from(candidates, turnedOn);
-        */
         // Feasibility check
         if (!input.isFeasible()) {
           // Find violated forts
