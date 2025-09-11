@@ -2,6 +2,7 @@
 #define PDS_HPP
 #include <fmt/core.h>
 #include <fmt/ranges.h>
+
 #include <range/v3/all.hpp>
 
 #include "boost/graph/adjacency_list.hpp"
@@ -49,7 +50,7 @@ struct SolveResult {
 };
 
 class Pds {
-private:
+ private:
   PowerGrid graph;
   size_t n_channels;
   VertexList activated;
@@ -59,19 +60,22 @@ private:
   std::map<Vertex, Vertex> propagator;
   PrecedenceDigraph digraph;
 
-  void activate_neighbor(Vertex from, Vertex to, std::list<Vertex> &turnedOn, std::list<Vertex> &turnedOff);
-  void deactivate_neighbor(Vertex from, Vertex to, std::list<Vertex> &turnedOff);
+  void activate_neighbor(Vertex from, Vertex to, std::list<Vertex> &turnedOn,
+                         std::list<Vertex> &turnedOff);
+  void deactivate_neighbor(Vertex from, Vertex to,
+                           std::list<Vertex> &turnedOff);
 
   void despropagate_to(Vertex to, std::list<Vertex> &turnedOff);
   void despropagate_from(Vertex v, std::list<Vertex> &turnedOff);
   void despropagate(Vertex from, Vertex to, std::list<Vertex> &turnedOff);
 
   [[nodiscard]] bool try_propagation_to(Vertex v, std::list<Vertex> &turnedOn);
-  [[nodiscard]] bool try_propagation_from(Vertex v, std::list<Vertex> &turnedOn);
+  [[nodiscard]] bool try_propagation_from(Vertex v,
+                                          std::list<Vertex> &turnedOn);
   [[nodiscard]] bool check_propagation(Vertex from, Vertex to);
   void propagate(Vertex from, Vertex to, std::list<Vertex> &turnedOn);
 
-public:
+ public:
   Pds();
   explicit Pds(PowerGrid &&graph, size_t n_channels);
   explicit Pds(const PowerGrid &graph, size_t n_channels);
@@ -92,13 +96,11 @@ public:
     return monitoredSet[v];
   }
 
-  [[nodiscard]] inline bool isActivated(Vertex v) const {
-    return activated[v];
-  }
+  [[nodiscard]] inline bool isActivated(Vertex v) const { return activated[v]; }
 
   [[nodiscard]] inline size_t get_n_activated() const {
-    return boost::range::count_if(
-        activated, [this](auto b) { return b == true; });
+    return boost::range::count_if(activated,
+                                  [this](auto b) { return b == true; });
   }
 
   VertexList get_monitored_set(std::map<Vertex, double> &s,
@@ -107,16 +109,15 @@ public:
   // [[nodiscard]] inline size_t get_n_monitored() const {return n_monitored;}
 
   inline void get_unmonitored_set(std::vector<Vertex> &vec) const {
-    boost::copy(vertices(graph) |
-                    boost::adaptors::filtered(
-                        [this](auto v) { return !monitoredSet[v]; }),
+    boost::copy(vertices(graph) | boost::adaptors::filtered([this](auto v) {
+                  return !monitoredSet[v];
+                }),
                 std::back_inserter(vec));
   }
 
   inline void get_unactivated_set(std::vector<Vertex> &vec) const {
-    boost::copy(vertices(graph) |
-                    boost::adaptors::filtered(
-                        [this](auto v) { return !activated[v]; }),
+    boost::copy(vertices(graph) | boost::adaptors::filtered(
+                                      [this](auto v) { return !activated[v]; }),
                 std::back_inserter(vec));
   }
 
@@ -132,18 +133,21 @@ public:
            }) == static_cast<std::ptrdiff_t>(boost::num_vertices(graph));
   }
 
-  void activate(Vertex v, std::vector<Vertex> &neighbors, 
-    std::list<Vertex> &turnedOn, std::list<Vertex> &turnedOff);
+  void activate(Vertex v, std::vector<Vertex> &neighbors,
+                std::list<Vertex> &turnedOn, std::list<Vertex> &turnedOff);
+  void activate_blank(std::vector<Vertex> &blank,
+                      std::map<Vertex, std::vector<Vertex>> &neighbors);
   void deactivate(Vertex v, std::list<Vertex> &turnedOff);
 
   void propagate_to(std::list<Vertex> &candidates, std::list<Vertex> &turnedOn);
-  void propagate_from(std::list<Vertex> &candidates, std::list<Vertex> &turnedOn);
+  void propagate_from(std::list<Vertex> &candidates,
+                      std::list<Vertex> &turnedOn);
 
   [[nodiscard]] bool check_get_monitored_set(std::map<Vertex, double> &s,
-                               std::map<Edge, double> &w);
+                                             std::map<Edge, double> &w);
 
-}; // end of class Pds
+};  // end of class Pds
 
-} // end of namespace pds
+}  // end of namespace pds
 
-#endif // PDS_HPP
+#endif  // PDS_HPP
