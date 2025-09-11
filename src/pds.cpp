@@ -90,6 +90,7 @@ void Pds::activate2(Vertex v, std::vector<bool> &dominate) {
       observers[u].erase(v);
       if (observers[u].empty()) {
         monitoredSet[u] = false;
+        turnedOff.push_back(u);
         despropagate_from(u, turnedOff);
       }
     }
@@ -127,8 +128,15 @@ void Pds::deactivate2(Vertex v) {
   }
 
   // Desdominate neighbors 
-  for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
-    deactivate_neighbor(v, u, turnedOff);
+  for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph))) {
+    if (!observers[u].contains(v)) continue;
+    observers[u].erase(v);
+    if (observers[u].empty()) {
+      monitoredSet[u] = false;
+      turnedOff.push_back(u);
+      despropagate_from(u, turnedOff);
+    }
+  }
 
   // Try propagations to turned off vertices
   propagate_to(turnedOff, turnedOn);
