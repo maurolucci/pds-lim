@@ -178,13 +178,13 @@ int main(int argc, const char **argv) {
   if (outProp)
     solver.append("-outp");
   if (initEFPS)
-    solver.append("-efps1");
+    solver.append("-init");
   if (initFPS1)
-    solver.append("-fps1");
+    solver.append("-init1");
   if (initFPS2)
-    solver.append("-fps2");
+    solver.append("-init2");
   if (initFPS3)
-    solver.append("-fps3");
+    solver.append("-init3");
 
   // Read inputs
   for (const std::string &filename : inputs) {
@@ -236,8 +236,9 @@ int main(int argc, const char **argv) {
       std::string solverName = vm["solver"].as<std::string>();
       try {
         if (solverName == "efpss") {
-          result = solveLazyEfpss(input, logPath, output.cbFile, output.solFile,
-                                  timeout, inProp, outProp, initEFPS, lazyLimit);
+          result =
+              solveLazyEfpss(input, logPath, output.cbFile, output.solFile,
+                             timeout, inProp, outProp, initEFPS, lazyLimit);
         } else if (solverName == "fpss") {
           result = solveLazyFpss(input, logPath, output.cbFile, output.solFile,
                                  timeout, inProp, outProp, initFPS1, initFPS2,
