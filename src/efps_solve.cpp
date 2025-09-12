@@ -27,7 +27,7 @@ struct LazyEfpsCB : public GRBCallback {
   size_t &totalLazy;
 
   LazyEfpsCB(Pds &input, std::ostream &callbackFile, std::ostream &solutionFile,
-             bool inProp, bool outProp, size_t lzLimit)
+             bool inProp, bool outProp, bool initFPS, size_t lzLimit)
       : mipmodel(),
         model(*mipmodel.model),
         s(mipmodel.s),
@@ -115,7 +115,7 @@ struct LazyEfpsCB : public GRBCallback {
     build_prec2props_map();
 
     // Initial FPS constraints associated to cycles of length 2
-    if (initFPS1 || initFPS2 || initFPS3) {
+    if (initFPS) {
       // Find cyclic precedences of length 2
       for (auto &[prec, props1] : prec2props) {
         auto [u, v] = prec;
@@ -139,7 +139,6 @@ struct LazyEfpsCB : public GRBCallback {
           }
       }
     }
-
   }
 
   SolveResult solve(boost::optional<std::string> logPath, double timeLimit) {
@@ -440,8 +439,8 @@ struct LazyEfpsCB : public GRBCallback {
 SolveResult solveLazyEfpss(Pds &input, boost::optional<std::string> logPath,
                            std::ostream &callbackFile, std::ostream &solFile,
                            double timeLimit, bool inProp, bool outProp,
-                           size_t lazyLimit) {
-  LazyEfpsCB lazyEfpss(input, callbackFile, solFile, inProp, outProp,
+                           bool initFPS, size_t lazyLimit) {
+  LazyEfpsCB lazyEfpss(input, callbackFile, solFile, inProp, outProp, initFPS,
                        lazyLimit);
   return lazyEfpss.solve(logPath, timeLimit);
 }

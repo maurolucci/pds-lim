@@ -6,7 +6,7 @@
 
 namespace pds {
 SolveResult solveLazyEfpss(Pds &, boost::optional<std::string>, std::ostream &,
-                           std::ostream &, double, bool, bool, size_t);
+                           std::ostream &, double, bool, bool, bool, size_t);
 } // end of namespace pds
 
 #endif // EFPS_SOLVE_HPP
