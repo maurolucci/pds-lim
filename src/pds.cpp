@@ -183,7 +183,7 @@ void Pds::despropagate_from(Vertex v, std::list<Vertex> &turnedOff) {
 }
 
 void Pds::despropagate(Vertex from, Vertex to, std::list<Vertex> &turnedOff) {
-  if (observers[to].empty()) {
+  if (observers[to].empty() && !propagator.contains(to)) {
     assert(monitoredSet[to]);
     monitoredSet[to] = false;
     n_monitored--;
