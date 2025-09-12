@@ -138,13 +138,12 @@ struct LazyFortCB : public GRBCallback {
     std::set<Fort> forts;
 
     // Copy solution
-    Pds newSolution(input);
+    // Pds newSolution(input);
 
     // Get blank vertices
     // Unmonitored or unactivated?
     std::vector<Vertex> blank;
-    // newSolution.get_unmonitored_set(blank);
-    newSolution.get_unactivated_set(blank);
+    input.get_unmonitored_set(blank);
 
     // Shuffle blank set
     boost::range::random_shuffle(blank);
@@ -166,25 +165,29 @@ struct LazyFortCB : public GRBCallback {
           dominate[v][indices[i]] = true;
         }
       }
-      newSolution.activate(v, dominate[v]);
+      input.activate(v, dominate[v]);
     }
 
-    // Desactivate some vertices
+    // Deactivate some blank vertices
     for (Vertex v : blank) {
       if (forts.size() >= fortsLimit) break;
 
       // Deactivate v
-      newSolution.deactivate(v);
+      input.deactivate(v);
 
       // Feasibility check
-      if (!newSolution.isFeasible()) {
+      if (!input.isFeasible()) {
         // Find and insert fort
-        forts.insert(findFort(newSolution));
+        forts.insert(findFort(input));
 
         // Reactivate v
-        newSolution.activate(v, dominate[v]);
+        input.activate(v, dominate[v]);
       }
     }
+
+    // Deactivate all blank vertices
+    for (Vertex v : blank)
+      input.deactivate(v);
 
     return forts;
   }
