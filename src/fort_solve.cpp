@@ -214,7 +214,7 @@ struct LazyFortCB : public GRBCallback {
         forts.insert(findFort(newSolution));
 
         // Reactivate v
-        newSolution.activate(v, dominate[v]);
+        newSolution.activate2(v, dominate[v]);
       }
     }
 
