@@ -63,7 +63,7 @@ void Pds::activate(Vertex v, std::vector<bool> &dominate) {
   // Activate v
   if (!activated[v]) {
     activated[v] = true;
-    if (observers[v].empty()) {
+    if (observers[v].empty() && !propagator.contains(v)) {
       assert(!monitoredSet[v]);
       monitoredSet[v] = true;
       n_monitored++;
