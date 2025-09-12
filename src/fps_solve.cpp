@@ -189,7 +189,7 @@ struct LazyFpsCB : public GRBCallback {
             size_t i = 0;
             for (auto u :
                  boost::make_iterator_range(adjacent_vertices(v, graph))) {
-              if (degree(v, graph) <= input.get_n_channels() - 1 ||
+              if (degree(v, graph) <= input.get_n_channels() ||
                   getSolution(w.at(std::make_pair(v, u))) > 0.5)
                 dominate[i] = true;
               ++i;
