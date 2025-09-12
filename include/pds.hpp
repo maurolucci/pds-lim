@@ -60,11 +60,6 @@ class Pds {
   std::map<Vertex, Vertex> propagator;
   PrecedenceDigraph digraph;
 
-  void activate_neighbor(Vertex from, Vertex to, std::list<Vertex> &turnedOn,
-                         std::list<Vertex> &turnedOff);
-  void deactivate_neighbor(Vertex from, Vertex to,
-                           std::list<Vertex> &turnedOff);
-
   void despropagate_to(Vertex to, std::list<Vertex> &turnedOff);
   void despropagate_from(Vertex v, std::list<Vertex> &turnedOff);
   void despropagate(Vertex from, Vertex to, std::list<Vertex> &turnedOff);
@@ -74,6 +69,9 @@ class Pds {
                                           std::list<Vertex> &turnedOn);
   [[nodiscard]] bool check_propagation(Vertex from, Vertex to);
   void propagate(Vertex from, Vertex to, std::list<Vertex> &turnedOn);
+  void propagate_to(std::list<Vertex> &candidates, std::list<Vertex> &turnedOn);
+  void propagate_from(std::list<Vertex> &candidates,
+                      std::list<Vertex> &turnedOn);
 
  public:
   Pds();
@@ -133,15 +131,8 @@ class Pds {
            }) == static_cast<std::ptrdiff_t>(boost::num_vertices(graph));
   }
 
-  void activate(Vertex v, std::vector<Vertex> &neighbors,
-                std::list<Vertex> &turnedOn, std::list<Vertex> &turnedOff);
-  void activate2(Vertex v, std::vector<bool> &dominate);
-  void deactivate(Vertex v, std::list<Vertex> &turnedOff);
-  void deactivate2(Vertex v);
-
-  void propagate_to(std::list<Vertex> &candidates, std::list<Vertex> &turnedOn);
-  void propagate_from(std::list<Vertex> &candidates,
-                      std::list<Vertex> &turnedOn);
+  void activate(Vertex v, std::vector<bool> &dominate);
+  void deactivate(Vertex v);
 
   [[nodiscard]] bool check_get_monitored_set(std::map<Vertex, double> &s,
                                              std::map<Edge, double> &w);

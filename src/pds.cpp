@@ -54,7 +54,7 @@ VertexList Pds::get_monitored_set(std::map<Vertex, double> &s,
   return monitored;
 }
 
-void Pds::activate2(Vertex v, std::vector<bool> &dominate) {
+void Pds::activate(Vertex v, std::vector<bool> &dominate) {
 
   bool act = activated[v];
   std::list<Vertex> turnedOn;
@@ -111,7 +111,7 @@ void Pds::activate2(Vertex v, std::vector<bool> &dominate) {
   propagate_from(candidates, turnedOn);
 }
 
-void Pds::deactivate2(Vertex v) {
+void Pds::deactivate(Vertex v) {
   
   if (!activated[v]) return;
 
@@ -140,63 +140,6 @@ void Pds::deactivate2(Vertex v) {
 
   // Try propagations to turned off vertices
   propagate_to(turnedOff, turnedOn);
-}
-
-
-void Pds::activate(Vertex v, std::vector<Vertex> &neighbors,
-                   std::list<Vertex> &turnedOn, std::list<Vertex> &turnedOff) {
-  if (!activated[v]) {
-    activated[v] = true;
-    if (observers[v].empty()) {
-      monitoredSet[v] = true;
-      turnedOn.push_back(v);
-      observers[v].insert(v);  // observe before despropagating
-      despropagate_to(v, turnedOff);
-    } else
-      observers[v].insert(v);
-  }
-  for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph))) {
-    if (std::find(neighbors.begin(), neighbors.end(), u) != neighbors.end())
-      activate_neighbor(v, u, turnedOn, turnedOff);
-    else
-      deactivate_neighbor(v, u, turnedOff);
-  }
-}
-
-void Pds::deactivate(Vertex v, std::list<Vertex> &turnedOff) {
-  if (!activated[v]) return;
-  activated[v] = false;
-  observers[v].erase(v);
-  if (observers[v].empty()) {
-    monitoredSet[v] = false;
-    turnedOff.push_back(v);
-    despropagate_from(v, turnedOff);
-  }
-  for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
-    deactivate_neighbor(v, u, turnedOff);
-}
-
-void Pds::activate_neighbor(Vertex from, Vertex to, std::list<Vertex> &turnedOn,
-                            std::list<Vertex> &turnedOff) {
-  if (observers[to].contains(from)) return;
-  if (observers[to].empty()) {
-    monitoredSet[to] = true;
-    observers[to].insert(from);  // observe before despropagating
-    despropagate_to(to, turnedOff);
-    turnedOn.push_back(to);
-  } else
-    observers[to].insert(from);
-}
-
-void Pds::deactivate_neighbor(Vertex from, Vertex to,
-                              std::list<Vertex> &turnedOff) {
-  if (!observers[to].contains(from)) return;
-  observers[to].erase(from);
-  if (observers[to].empty()) {
-    monitoredSet[to] = false;
-    turnedOff.push_back(to);
-    despropagate_from(to, turnedOff);
-  }
 }
 
 void Pds::despropagate_to(Vertex to, std::list<Vertex> &turnedOff) {

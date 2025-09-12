@@ -95,7 +95,7 @@ struct LazyFortCB : public GRBCallback {
 
         for (auto v : boost::make_iterator_range(vertices(graph))) {
           if (getSolution(s.at(v)) < 0.5)
-            input.deactivate2(v);
+            input.deactivate(v);
           else {
             std::vector<bool> dominate(degree(v, graph), false);
             size_t i = 0;
@@ -106,41 +106,9 @@ struct LazyFortCB : public GRBCallback {
                 dominate[i] = true;
               ++i;
             }
-            input.activate2(v, dominate);
+            input.activate(v, dominate);
           }
         }
-
-        // // First deactivate vertices
-        // std::list<Vertex> turnedOff, turnedOn;
-        // for (auto v : boost::make_iterator_range(vertices(graph)))
-        //   if (getSolution(s.at(v)) < 0.5) input.deactivate(v, turnedOff);
-        // // Try propagation to turned off vertices
-        // input.propagate_to(turnedOff, turnedOn);
-
-        // // Second activate vertices
-        // turnedOff.clear();
-        // for (auto v : boost::make_iterator_range(vertices(graph)))
-        //   if (getSolution(s.at(v)) > 0.5) {
-        //     std::vector<Vertex> neighbors;
-        //     for (auto u :
-        //          boost::make_iterator_range(adjacent_vertices(v, graph)))
-        //       if (degree(v, graph) <= input.get_n_channels() - 1 ||
-        //           getSolution(w.at(std::make_pair(v, u))) > 0.5)
-        //         neighbors.push_back(u);
-        //     input.activate(v, neighbors, turnedOn, turnedOff);
-        //   }
-        // // Try propagation to turned off vertices
-        // input.propagate_to(turnedOff, turnedOn);
-        // // Try propagation from turned on vertices or their neighbors
-        // std::list<Vertex> candidates;
-        // for (auto u : turnedOn) {
-        //   if (input.isZeroInjection(u)) candidates.push_back(u);
-        //   for (auto y : boost::make_iterator_range(adjacent_vertices(u,
-        //   graph)))
-        //     if (input.isZeroInjection(y) && input.isMonitored(y))
-        //       candidates.push_back(y);
-        // }
-        // input.propagate_from(candidates, turnedOn);
 
         // Feasibility check
         if (!input.isFeasible()) {
@@ -198,7 +166,7 @@ struct LazyFortCB : public GRBCallback {
           dominate[v][indices[i]] = true;
         }
       }
-      newSolution.activate2(v, dominate[v]);
+      newSolution.activate(v, dominate[v]);
     }
 
     // Desactivate some vertices
@@ -206,7 +174,7 @@ struct LazyFortCB : public GRBCallback {
       if (forts.size() >= fortsLimit) break;
 
       // Deactivate v
-      newSolution.deactivate2(v);
+      newSolution.deactivate(v);
 
       // Feasibility check
       if (!newSolution.isFeasible()) {
@@ -214,76 +182,11 @@ struct LazyFortCB : public GRBCallback {
         forts.insert(findFort(newSolution));
 
         // Reactivate v
-        newSolution.activate2(v, dominate[v]);
+        newSolution.activate(v, dominate[v]);
       }
     }
 
-    // // Preselect random neighbors for blank vertices
-    // std::map<Vertex, std::vector<Vertex>> neighbors;
-    // for (Vertex v : blank) {
-    //   neighbors[v] = std::vector<Vertex>();
-    //   boost::copy(adjacent_vertices(v, graph),
-    //               std::back_inserter(neighbors[v]));
-    //   size_t k = std::min(neighbors[v].size(), n_channels - 1);
-    //   if (k < neighbors[v].size()) {
-    //     neighbors[v].resize(k);
-    //     random_unique(neighbors[v].begin(), neighbors[v].end(), k);
-    //   }
-    // }
-
-    // // Activate all blank vertices
-    // // (propagation is unnecessary here)
-    // std::list<Vertex> trash;
-    // for (Vertex v : blank) newSolution.activate(v, neighbors[v], trash,
-    // trash);
-
-    // // MINIMISE FEASIBLE SOLUTION
-    // for (Vertex v : blank) {
-    //   if (forts.size() >= fortsLimit) break;
-
-    //   // Deactivate v
-    //   std::list<Vertex> turnedOff;
-    //   newSolution.deactivate(v, turnedOff);
-
-    //   // Try propagations to changed vertices
-    //   newSolution.propagate_to(turnedOff, trash);
-
-    //   // Feasibility check
-    //   if (!newSolution.isFeasible()) {
-    //     // Find and insert fort
-    //     forts.insert(findFort(newSolution));
-
-    //     // Reactivate v
-    //     std::list<Vertex> turnedOn;
-    //     newSolution.activate(v, neighbors[v], turnedOn, trash);
-
-    //     // Try propagations from changed vertices or their neighbors
-    //     std::list<Vertex> candidates;
-    //     for (auto u : turnedOn) {
-    //       if (newSolution.isZeroInjection(u)) candidates.push_back(u);
-    //       for (auto y : boost::make_iterator_range(adjacent_vertices(u,
-    //       graph)))
-    //         if (newSolution.isZeroInjection(y) && newSolution.isMonitored(y))
-    //           candidates.push_back(y);
-    //     }
-    //     newSolution.propagate_from(candidates, trash);
-    //   }
-    // }
-
     return forts;
-  }
-
-  template <class bidiiter>
-  bidiiter random_unique(bidiiter begin, bidiiter end, size_t num_random) {
-    size_t left = std::distance(begin, end);
-    while (num_random--) {
-      bidiiter r = begin;
-      std::advance(r, rand() % left);
-      std::swap(*begin, *r);
-      ++begin;
-      --left;
-    }
-    return begin;
   }
 
   Fort findFort(Pds &input) {
