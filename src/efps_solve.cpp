@@ -1,14 +1,15 @@
 #include "efps_solve.hpp"
-#include "gurobi_common.hpp"
+
+#include <gurobi_c++.h>
 
 #include <fstream>
-#include <gurobi_c++.h>
+
+#include "gurobi_common.hpp"
 
 namespace pds {
 
 namespace {
 struct LazyEfpsCB : public GRBCallback {
-
   MIPModel mipmodel;
   GRBModel &model;
   std::map<pds::Vertex, GRBVar> &s;
@@ -27,13 +28,19 @@ struct LazyEfpsCB : public GRBCallback {
 
   LazyEfpsCB(Pds &input, std::ostream &callbackFile, std::ostream &solutionFile,
              bool inProp, bool outProp, size_t lzLimit)
-      : mipmodel(), model(*mipmodel.model), s(mipmodel.s), w(mipmodel.w), y(),
-        input(input), graph(input.get_graph()), cbFile(callbackFile),
-        solFile(solutionFile), lazyLimit(lzLimit),
+      : mipmodel(),
+        model(*mipmodel.model),
+        s(mipmodel.s),
+        w(mipmodel.w),
+        y(),
+        input(input),
+        graph(input.get_graph()),
+        cbFile(callbackFile),
+        solFile(solutionFile),
+        lazyLimit(lzLimit),
         totalCallback(mipmodel.totalCallback),
         totalCallbackTime(mipmodel.totalCallbackTime),
         totalLazy(mipmodel.totalLazy) {
-
     size_t n_channels = input.get_n_channels();
 
     model.setCallback(this);
@@ -58,7 +65,6 @@ struct LazyEfpsCB : public GRBCallback {
 
     // Add constraints
     for (auto v : boost::make_iterator_range(vertices(graph))) {
-
       // (1) s_v + sum_{u \in N(v) \cap V_1} s_u + sum_{u \in N(v) \cap V_2}
       // w_u_v + sum_{u \in N(v) \cap V_Z} y_u_v == 1, \forall v \in V
       GRBLinExpr constr1 = 0;
@@ -69,8 +75,7 @@ struct LazyEfpsCB : public GRBCallback {
           constr1 += s.at(u);
         else
           constr1 += w.at(std::make_pair(u, v));
-        if (input.isZeroInjection(u))
-          constr1 += y.at(std::make_pair(u, v));
+        if (input.isZeroInjection(u)) constr1 += y.at(std::make_pair(u, v));
       }
       model.addConstr(constr1 >= 1);
 
@@ -89,8 +94,7 @@ struct LazyEfpsCB : public GRBCallback {
         GRBLinExpr constr4 = 0;
         for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
           constr4 += y.at(std::make_pair(v, u));
-        if (degree(v, graph) <= n_channels)
-          constr4 += s.at(v);
+        if (degree(v, graph) <= n_channels) constr4 += s.at(v);
         model.addConstr(constr4 <= 1);
       }
 
@@ -104,8 +108,7 @@ struct LazyEfpsCB : public GRBCallback {
             constr5 += y.at(std::make_pair(u, v));
             nlhs++;
           }
-        if (nlhs > 0)
-          model.addConstr(constr5 <= 1);
+        if (nlhs > 0) model.addConstr(constr5 <= 1);
       }
     }
 
@@ -121,92 +124,71 @@ struct LazyEfpsCB : public GRBCallback {
   }
 
   void callback() override {
-
     switch (where) {
+      // MIP solution callback
+      // Integer solution founded (it does not necessarily improve the
+      // incumbent)
+      case GRB_CB_MIPSOL:
 
-    // MIP solution callback
-    // Integer solution founded (it does not necessarily improve the
-    // incumbent)
-    case GRB_CB_MIPSOL:
+        auto t0 = std::chrono::high_resolution_clock::now();
+        totalCallback++;
 
-      auto t0 = std::chrono::high_resolution_clock::now();
-      totalCallback++;
-
-      // Update solution
-
-      // First deactivate vertices that became turned off
-      std::list<Vertex> turnedOff, turnedOn;
-      for (auto v : boost::make_iterator_range(vertices(graph)))
-        if (getSolution(s.at(v)) < 0.5)
-          input.deactivate(v, turnedOff);
-      // Try propagation to turned off vertices
-      input.propagate_to(turnedOff, turnedOn);
-
-      // Second activate vertices that became turned on
-      turnedOff.clear();
-      for (auto v : boost::make_iterator_range(vertices(graph)))
-        if (getSolution(s.at(v)) > 0.5) {
-          std::vector<Vertex> neighbors;
-          for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
-            if (degree(v, graph) <= input.get_n_channels() ||
-                getSolution(w.at(std::make_pair(v, u))) > 0.5)
-              neighbors.push_back(u);
-          input.activate(v, neighbors, turnedOn, turnedOff);
+        // Update solution
+        for (auto v : boost::make_iterator_range(vertices(graph))) {
+          if (getSolution(s.at(v)) < 0.5)
+            input.deactivate(v);
+          else {
+            std::vector<bool> dominate(degree(v, graph), false);
+            size_t i = 0;
+            for (auto u :
+                 boost::make_iterator_range(adjacent_vertices(v, graph))) {
+              if (degree(v, graph) <= input.get_n_channels() - 1 ||
+                  getSolution(w.at(std::make_pair(v, u))) > 0.5)
+                dominate[i] = true;
+              ++i;
+            }
+            input.activate(v, dominate);
+          }
         }
-      // Try propagation to turned off vertices
-      input.propagate_to(turnedOff, turnedOn);
-      // Try propagation from turned on vertices or their neighbors
-      std::list<Vertex> candidates;
-      for (auto u : turnedOn) {
-        if (input.isZeroInjection(u))
-          candidates.push_back(u);
-        for (auto y : boost::make_iterator_range(adjacent_vertices(u, graph)))
-          if (input.isZeroInjection(y) && input.isMonitored(y))
-            candidates.push_back(y);
-      }
-      input.propagate_from(candidates, turnedOn);
 
-      // Feasibility check
-      if (!input.isFeasible()) {
+        // Feasibility check
+        if (!input.isFeasible()) {
+          // Find violated cycles
+          PrecedenceDigraph digraph = build_precedence_digraph();
+          std::set<std::pair<EdgeList, size_t>> efpss =
+              find_efpss(digraph, lazyLimit);
+          std::pair<double, double> avg = addLazyEfpss(efpss);
+          totalLazy += efpss.size();
 
-        // Find violated cycles
-        PrecedenceDigraph digraph = build_precedence_digraph();
-        std::set<std::pair<EdgeList, size_t>> efpss =
-            find_efpss(digraph, lazyLimit);
-        std::pair<double, double> avg = addLazyEfpss(efpss);
-        totalLazy += efpss.size();
+          // Report to callback file
+          cbFile << fmt::format(
+                        "# efps: {}, avg. size: {:.2f}, avg. ext. size: {:.2f}",
+                        efpss.size(), avg.first, avg.second)
+                 << std::endl;
+        }
 
-        // Report to callback file
-        cbFile << fmt::format(
-                      "# efps: {}, avg. size: {:.2f}, avg. ext. size: {:.2f}",
-                      efpss.size(), avg.first, avg.second)
-               << std::endl;
-      }
+        auto t1 = std::chrono::high_resolution_clock::now();
+        totalCallbackTime +=
+            std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0)
+                .count();
 
-      auto t1 = std::chrono::high_resolution_clock::now();
-      totalCallbackTime +=
-          std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0)
-              .count();
-
-      break;
+        break;
     }
   }
 
-private:
+ private:
   // Function to build the map from a precedence to the list of propagations
   // that impose it
   void build_prec2props_map() {
     prec2props.clear();
     for (auto v : boost::make_iterator_range(vertices(graph))) {
-      if (!input.isZeroInjection(v))
-        continue;
+      if (!input.isZeroInjection(v)) continue;
       for (auto u :
            boost::make_iterator_range(boost::adjacent_vertices(v, graph))) {
         prec2props[std::make_pair(v, u)].push_back(std::make_pair(v, u));
         for (auto w :
              boost::make_iterator_range(boost::adjacent_vertices(v, graph))) {
-          if (w == u)
-            continue;
+          if (w == u) continue;
           prec2props[std::make_pair(w, u)].push_back(std::make_pair(v, u));
         }
       }
@@ -217,23 +199,18 @@ private:
   // propagations. ATTENTION: redundant propagations are ignored and only
   // the unmonitored vertices are considered
   PrecedenceDigraph build_precedence_digraph() {
-
     PrecedenceDigraph digraph;
     std::map<Vertex, Vertex> name;
     for (auto v : boost::make_iterator_range(vertices(graph))) {
-      if (input.isMonitored(v))
-        continue;
+      if (input.isMonitored(v)) continue;
       if (!name.contains(v))
         name[v] = boost::add_vertex(LabelledVertex{.label = v}, digraph);
       bool redudant = false;
       for (auto u :
            boost::make_iterator_range(boost::adjacent_vertices(v, graph))) {
-        if (!input.isZeroInjection(u))
-          continue;
-        if (getSolution(y.at(std::make_pair(u, v))) < 0.5)
-          continue;
-        if (redudant)
-          break;
+        if (!input.isZeroInjection(u)) continue;
+        if (getSolution(y.at(std::make_pair(u, v))) < 0.5) continue;
+        if (redudant) break;
         redudant = true;
         if (!input.isMonitored(u)) {
           if (!name.contains(u))
@@ -242,8 +219,7 @@ private:
         }
         for (auto w :
              boost::make_iterator_range(boost::adjacent_vertices(u, graph))) {
-          if (w == v || input.isMonitored(w))
-            continue;
+          if (w == v || input.isMonitored(w)) continue;
           if (!name.contains(w))
             name[w] = boost::add_vertex(LabelledVertex{.label = w}, digraph);
           boost::add_edge(name[w], name[v], digraph);
@@ -262,8 +238,7 @@ private:
     size_t max_level = 0;
     for (auto e : make_iterator_range(in_edges(v, digraph))) {
       Node u = source(e, digraph);
-      if (!preceded_by.contains(u))
-        continue;
+      if (!preceded_by.contains(u)) continue;
       auto p = preceded_by.at(u);
       if (p.second <= max_level) {
         continue;
@@ -283,8 +258,7 @@ private:
     size_t min_level = std::numeric_limits<size_t>::max();
     for (auto e : make_iterator_range(out_edges(v, digraph))) {
       Node w = target(e, digraph);
-      if (!preceded_by.contains(w) || w == u)
-        continue;
+      if (!preceded_by.contains(w) || w == u) continue;
       auto p = preceded_by.at(w);
       if (p.second >= min_level) {
         continue;
@@ -299,7 +273,6 @@ private:
   // Functions that cuts a cycle from vertex u to vertex v
   void cut_cycle(std::map<Node, std::pair<Node, size_t>> &preceded_by, Node u,
                  Node v) {
-
     Node remove = u;
     Node pred;
 
@@ -316,7 +289,6 @@ private:
   // and makes u preceded by v
   void cut_and_join_cycle(std::map<Node, std::pair<Node, size_t>> &preceded_by,
                           Node u, Node v) {
-
     size_t level = preceded_by[u].second;
     cut_cycle(preceded_by, u, v);
     preceded_by[u] = std::make_pair(v, level);
@@ -325,10 +297,9 @@ private:
   }
 
   // Function that takes a cycle and makes it chordless
-  void
-  make_cycle_chordless(PrecedenceDigraph &digraph,
-                       std::map<Node, std::pair<Node, size_t>> &preceded_by,
-                       Node v) {
+  void make_cycle_chordless(
+      PrecedenceDigraph &digraph,
+      std::map<Node, std::pair<Node, size_t>> &preceded_by, Node v) {
     Node pred = preceded_by[v].first;
     Node succ = v;
     // Check if pred has already visited successors (different from succ).
@@ -336,8 +307,7 @@ private:
     while (pred != v) {
       auto [u, ok] =
           get_farthest_visited_successor(digraph, preceded_by, pred, succ);
-      if (ok)
-        cut_and_join_cycle(preceded_by, u, pred);
+      if (ok) cut_and_join_cycle(preceded_by, u, pred);
       succ = pred;
       pred = preceded_by[succ].first;
     }
@@ -397,8 +367,7 @@ private:
     for (auto it = cycle.rbegin(); it != cycle.rend();) {
       Vertex v = *it++;
       int u = it != cycle.rend() ? *it : cycle.back();
-      for (auto &e : prec2props.at(std::make_pair(v, u)))
-        efps.push_back(e);
+      for (auto &e : prec2props.at(std::make_pair(v, u))) efps.push_back(e);
     }
     return efps;
   }
@@ -412,8 +381,7 @@ private:
     // Iterate over the vertices
     for (auto v : boost::make_iterator_range(vertices(digraph))) {
       // Check if the maximum number of FPSs has been found
-      if (efpss.size() >= fpssLimit)
-        break;
+      if (efpss.size() >= fpssLimit) break;
       // Find a chordless cycle (its existence is already guaranteed)
       VertexList cycle = find_chordless_cycle(digraph, v);
       // Map cycle to EFPS
@@ -423,9 +391,8 @@ private:
     return efpss;
   }
 
-  std::pair<double, double>
-  addLazyEfpss(std::set<std::pair<EdgeList, size_t>> &efpss) {
-
+  std::pair<double, double> addLazyEfpss(
+      std::set<std::pair<EdgeList, size_t>> &efpss) {
     size_t accumCycle = 0;
     size_t accumExt = 0;
 
@@ -433,8 +400,7 @@ private:
       accumCycle += size;
       accumExt += efps.size();
       GRBLinExpr pathSum;
-      for (auto [u, v] : efps)
-        pathSum += y.at(std::make_pair(u, v));
+      for (auto [u, v] : efps) pathSum += y.at(std::make_pair(u, v));
       addLazy(pathSum <= size - 1);
     }
 
@@ -442,7 +408,7 @@ private:
                           static_cast<double>(accumExt) / efpss.size());
   }
 };
-} // end of namespace
+}  // end of namespace
 
 SolveResult solveLazyEfpss(Pds &input, boost::optional<std::string> logPath,
                            std::ostream &callbackFile, std::ostream &solFile,
@@ -453,4 +419,4 @@ SolveResult solveLazyEfpss(Pds &input, boost::optional<std::string> logPath,
   return lazyEfpss.solve(logPath, timeLimit);
 }
 
-} // end of namespace pds
+}  // end of namespace pds
