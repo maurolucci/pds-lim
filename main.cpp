@@ -1,4 +1,3 @@
-#include "efps_solve.hpp"
 #include "fort_solve.hpp"
 #include "fps_fort_solve.hpp"
 #include "fps_solve.hpp"
@@ -242,9 +241,6 @@ int main(int argc, const char **argv) {
         } else if (solverName == "forts") {
           result = solveLazyForts(input, logPath, output.cbFile, output.solFile,
                                   timeout, lazyLimit);
-        } else if (solverName == "fpss-forts") {
-          result = solveLazyFpssForts(input, logPath, output.cbFile,
-                                      output.solFile, timeout, lazyLimit);
         } else {
           Solver solve = getSolver(vm);
           result = solve(input, logPath, output.solFile, timeout);
