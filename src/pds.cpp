@@ -64,6 +64,7 @@ void Pds::activate(Vertex v, std::vector<bool> &dominate) {
   if (!activated[v]) {
     activated[v] = true;
     if (observers[v].empty()) {
+      assert(!monitoredSet[v]);
       monitoredSet[v] = true;
       n_monitored++;
       turnedOn.push_back(v);
@@ -79,6 +80,7 @@ void Pds::activate(Vertex v, std::vector<bool> &dominate) {
     // Dominate
     if (dominate[i] && !observers[u].contains(v)) {
       if (observers[u].empty()) {
+        assert(!monitoredSet[u]);
         monitoredSet[u] = true;
         n_monitored++;
         turnedOn.push_back(u);
@@ -91,6 +93,7 @@ void Pds::activate(Vertex v, std::vector<bool> &dominate) {
     else if (act && !dominate[i] && observers[u].contains(v)) {
       observers[u].erase(v);
       if (observers[u].empty()) {
+        assert(monitoredSet[u]);
         monitoredSet[u] = false;
         n_monitored--;
         turnedOff.push_back(u);
@@ -124,6 +127,7 @@ void Pds::deactivate(Vertex v) {
   activated[v] = false;
   observers[v].erase(v);
   if (observers[v].empty()) {
+    assert(monitoredSet[v]);
     monitoredSet[v] = false;
     n_monitored--;
     turnedOff.push_back(v);
@@ -135,6 +139,7 @@ void Pds::deactivate(Vertex v) {
     if (!observers[u].contains(v)) continue;
     observers[u].erase(v);
     if (observers[u].empty()) {
+      assert(monitoredSet[u]);
       monitoredSet[u] = false;
       n_monitored--;
       turnedOff.push_back(u);
@@ -179,6 +184,7 @@ void Pds::despropagate_from(Vertex v, std::list<Vertex> &turnedOff) {
 
 void Pds::despropagate(Vertex from, Vertex to, std::list<Vertex> &turnedOff) {
   if (observers[to].empty()) {
+    assert(monitoredSet[to]);
     monitoredSet[to] = false;
     n_monitored--;
     turnedOff.push_back(to);
@@ -249,6 +255,7 @@ void Pds::propagate_from(std::list<Vertex> &candidates,
 }
 
 void Pds::propagate(Vertex from, Vertex to, std::list<Vertex> &turnedOn) {
+  assert(!monitoredSet[to]);
   monitoredSet[to] = true;
   n_monitored++;
   turnedOn.push_back(to);
