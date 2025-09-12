@@ -55,6 +55,7 @@ class Pds {
   size_t n_channels;
   VertexList activated;
   VertexList monitoredSet;
+  size_t n_monitored;
   std::vector<std::set<Vertex>> observers;
   std::map<Vertex, Vertex> propagates;
   std::map<Vertex, Vertex> propagator;
@@ -126,9 +127,7 @@ class Pds {
   }
 
   [[nodiscard]] inline bool isFeasible() const {
-    return boost::range::count_if(vertices(graph), [this](auto u) {
-             return monitoredSet[u];
-           }) == static_cast<std::ptrdiff_t>(boost::num_vertices(graph));
+    return num_vertices(graph) == n_monitored;
   }
 
   void activate(Vertex v, std::vector<bool> &dominate);
