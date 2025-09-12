@@ -79,7 +79,7 @@ void Pds::activate(Vertex v, std::vector<bool> &dominate) {
   for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph))) {
     // Dominate
     if (dominate[i] && !observers[u].contains(v)) {
-      if (observers[u].empty()) {
+      if (observers[u].empty() && !propagator.contains(u)) {
         assert(!monitoredSet[u]);
         monitoredSet[u] = true;
         n_monitored++;
