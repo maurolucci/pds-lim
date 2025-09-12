@@ -113,6 +113,33 @@ struct LazyEfpsCB : public GRBCallback {
     }
 
     build_prec2props_map();
+
+    // Initial FPS constraints associated to cycles of length 2
+    if (initFPS1 || initFPS2 || initFPS3) {
+      // Find cyclic precedences of length 2
+      for (auto &[prec, props1] : prec2props) {
+        auto [u, v] = prec;
+        // Avoid symmetries
+        if (u >= v) continue;
+        // Check if there is an opposite precedence
+        if (!prec2props.contains(std::make_pair(v, u))) continue;
+        auto &props2 = prec2props[std::make_pair(v, u)];
+        // Iterate over every possible FPS (cartesian product)
+        for (auto &p1 : props1)
+          for (auto &p2 : props2) {
+            // Classify the FPS
+            size_t type = classify_fps(p1, p2);
+            // Add FPS constraint
+            if ((type == 1 && initFPS1) || (type == 2 && initFPS2) ||
+                (type == 31 && initFPS3 && !outProp) ||
+                (type == 32 && initFPS3)) {
+              GRBLinExpr constr6 = y.at(p1) + y.at(p2);
+              model.addConstr(constr6 <= 1);
+            }
+          }
+      }
+    }
+
   }
 
   SolveResult solve(boost::optional<std::string> logPath, double timeLimit) {
