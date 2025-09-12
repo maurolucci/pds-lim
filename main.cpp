@@ -177,8 +177,8 @@ int main(int argc, const char **argv) {
     solver.append("-inp");
   if (outProp)
     solver.append("-outp");
-  if (initFPS)
-    solver.append("-fps");
+  if (initEFPS)
+    solver.append("-efps1");
   if (initFPS1)
     solver.append("-fps1");
   if (initFPS2)
