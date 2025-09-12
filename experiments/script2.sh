@@ -1,9 +1,10 @@
 #!/bin/bash
+# Experimentos con INF-EFPS
 
 TIMEOUT=900
 NRUN=5
-MAXNODES=2000
-declare -a SOLVERS=("brimkov" "forts" "cycles" "jovanovic" "fpss")
+MAXNODES=15000
+declare -a SOLVERS=("efpss")
 CASES="instances.csv"
 BIN="../pds-lim"
 INPUT="../inputs/"
@@ -24,7 +25,11 @@ do
         for omega in $(seq 0 $degree)
         do
             date
-            time $BIN -s $solver -w $omega -f $INPUT$name -z -n $NRUN -t $TIMEOUT -o $OUTPUT
+            time $BIN -s $solver -w $omega -f $INPUT$name -n $NRUN -t $TIMEOUT -o $OUTPUT
+            time $BIN -s $solver -w $omega -f $INPUT$name -n $NRUN -t $TIMEOUT -o $OUTPUT --in-prop
+            time $BIN -s $solver -w $omega -f $INPUT$name -n $NRUN -t $TIMEOUT -o $OUTPUT --out-prop
+            time $BIN -s $solver -w $omega -f $INPUT$name -n $NRUN -t $TIMEOUT -o $OUTPUT --in-prop --out-prop
+            time $BIN -s $solver -w $omega -f $INPUT$name -n $NRUN -t $TIMEOUT -o $OUTPUT --out-prop --init-efps
         done
     done
 done

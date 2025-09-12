@@ -1,10 +1,9 @@
 #!/bin/bash
-# Desigualdades válidas de INF-FPS
 
 TIMEOUT=900
 NRUN=5
 MAXNODES=15000
-declare -a SOLVERS=("fpss2")
+declare -a SOLVERS=("brimkov" "forts" "jovanovic")
 CASES="instances.csv"
 BIN="../pds-lim"
 INPUT="../inputs/"
@@ -26,9 +25,6 @@ do
         do
             date
             time $BIN -s $solver -w $omega -f $INPUT$name -n $NRUN -t $TIMEOUT -o $OUTPUT
-            time $BIN -s $solver -w $omega -f $INPUT$name -n $NRUN -t $TIMEOUT -o $OUTPUT --in-prop
-            time $BIN -s $solver -w $omega -f $INPUT$name -n $NRUN -t $TIMEOUT -o $OUTPUT --out-prop
-            time $BIN -s $solver -w $omega -f $INPUT$name -n $NRUN -t $TIMEOUT -o $OUTPUT --in-prop --out-prop
         done
     done
 done
