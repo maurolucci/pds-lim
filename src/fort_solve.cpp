@@ -190,7 +190,7 @@ struct LazyFortCB : public GRBCallback {
       std::iota(indices.begin(), indices.end(), 0);
       size_t k = std::min(degree(v, graph), n_channels - 1);
       if (k < degree(v, graph)) {
-        while (size_t len = degree(v, graph), i = 0; i < k; ++i, --len) {
+        for (size_t len = degree(v, graph), i = 0; i < k; ++i, --len) {
           int r = rand() % len;
           int j = indices[r];
           indices[r] = indices[i];
