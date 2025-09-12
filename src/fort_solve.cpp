@@ -52,7 +52,7 @@ struct LazyFortCB : public GRBCallback {
     for (auto v : boost::make_iterator_range(vertices(graph))) {
       s.try_emplace(
           v, model.addVar(0.0, 1.0, 1.0, GRB_BINARY, fmt::format("s_{}", v)));
-      if (degree(v, graph) > n_channels - 1) {
+      if (degree(v, graph) > n_channels) {
         for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
           w.try_emplace(std::make_pair(v, u),
                         model.addVar(0.0, 1.0, 0.0, GRB_BINARY,
@@ -62,13 +62,12 @@ struct LazyFortCB : public GRBCallback {
 
     // Add constraints
     for (auto v : boost::make_iterator_range(vertices(graph))) {
-      // (2) sum_{u \in N(v)} w_v_u <= (omega_v - 1) s_v, \forall v \in V_2
-      if (degree(v, graph) > n_channels - 1) {
+      // (2) sum_{u \in N(v)} w_v_u <= omega_v * s_v, \forall v \in V_2
+      if (degree(v, graph) > n_channels) {
         GRBLinExpr constr = 0;
         for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph)))
           constr += w.at(std::make_pair(v, u));
-        model.addConstr(constr ==
-                        std::min(degree(v, graph), (n_channels - 1)) * s.at(v));
+        model.addConstr(constr == n_channels * s.at(v));
       }
     }
   }
@@ -101,7 +100,7 @@ struct LazyFortCB : public GRBCallback {
             size_t i = 0;
             for (auto u :
                  boost::make_iterator_range(adjacent_vertices(v, graph))) {
-              if (degree(v, graph) <= input.get_n_channels() - 1 ||
+              if (degree(v, graph) <= input.get_n_channels() ||
                   getSolution(w.at(std::make_pair(v, u))) > 0.5)
                 dominate[i] = true;
               ++i;
@@ -156,7 +155,7 @@ struct LazyFortCB : public GRBCallback {
       dominate.emplace(v, std::vector<bool>(degree(v, graph), false));
       std::vector<size_t> indices(degree(v, graph));
       std::iota(indices.begin(), indices.end(), 0);
-      size_t k = std::min(degree(v, graph), n_channels - 1);
+      size_t k = std::min(degree(v, graph), n_channels);
       if (k < degree(v, graph)) {
         for (size_t len = degree(v, graph), i = 0; i < k; ++i, --len) {
           int r = rand() % len;
@@ -196,7 +195,7 @@ struct LazyFortCB : public GRBCallback {
       std::get<0>(fort).insert(u);
       for (auto z : boost::make_iterator_range(adjacent_vertices(u, graph))) {
         if (!input.isMonitored(z)) continue;
-        if (degree(z, graph) <= input.get_n_channels() - 1)
+        if (degree(z, graph) <= input.get_n_channels())
           std::get<1>(fort).insert(z);
         else
           std::get<2>(fort).insert(std::make_pair(z, u));
