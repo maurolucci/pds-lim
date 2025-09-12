@@ -92,7 +92,7 @@ void Pds::activate(Vertex v, std::vector<bool> &dominate) {
     // Desdominate
     else if (act && !dominate[i] && observers[u].contains(v)) {
       observers[u].erase(v);
-      if (observers[u].empty()) {
+      if (observers[u].empty() && !propagator.contains(u)) {
         assert(monitoredSet[u]);
         monitoredSet[u] = false;
         n_monitored--;
@@ -126,7 +126,7 @@ void Pds::deactivate(Vertex v) {
   // Deactivate v
   activated[v] = false;
   observers[v].erase(v);
-  if (observers[v].empty()) {
+  if (observers[v].empty() && !propagator.contains(v)) {
     assert(monitoredSet[v]);
     monitoredSet[v] = false;
     n_monitored--;
@@ -138,7 +138,7 @@ void Pds::deactivate(Vertex v) {
   for (auto u : boost::make_iterator_range(adjacent_vertices(v, graph))) {
     if (!observers[u].contains(v)) continue;
     observers[u].erase(v);
-    if (observers[u].empty()) {
+    if (observers[u].empty() && !propagator.contains(u)) {
       assert(monitoredSet[u]);
       monitoredSet[u] = false;
       n_monitored--;
