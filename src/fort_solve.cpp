@@ -143,7 +143,8 @@ struct LazyFortCB : public GRBCallback {
     // Get blank vertices
     // Unmonitored or unactivated?
     std::vector<Vertex> blank;
-    newSolution.get_unmonitored_set(blank);
+    // newSolution.get_unmonitored_set(blank);
+    newSolution.get_unactivated_set(blank);
 
     // Shuffle blank set
     boost::range::random_shuffle(blank);
