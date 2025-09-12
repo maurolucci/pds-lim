@@ -198,11 +198,7 @@ struct LazyFortCB : public GRBCallback {
           dominate[v][indices[i]] = true;
         }
       }
-      std::cout << "Vecinos de : " << v;
-      for (size_t i = 0; i < k; ++i)
-        std::cout << " " << indices[i];
-      std::cout << std::endl;
-      input.activate2(v, dominate[v]);
+      newSolution.activate2(v, dominate[v]);
     }
 
     // Desactivate some vertices
