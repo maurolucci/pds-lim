@@ -58,8 +58,8 @@ class Pds {
   size_t n_monitored;
   std::vector<size_t> n_monitored_neighbors;
   std::vector<std::set<Vertex>> observers;
-  std::map<Vertex, Vertex> propagates;
-  std::map<Vertex, Vertex> propagator;
+  std::vector<int> propagates;
+  std::vector<int> propagator;
   PrecedenceDigraph digraph;
 
   void despropagate_to(Vertex to, std::list<Vertex> &turnedOff);
