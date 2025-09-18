@@ -584,7 +584,13 @@ private:
       if (!ok)
         continue;
       // Map cycle to EFPS
-      auto ret = efpss.emplace(std::make_pair(get_efps(cycle), cycle.size()));
+      auto x = std::make_pair(get_efps(cycle), cycle.size());
+      if (efpss.contains(x)) {
+        std::cout << "Duplicate EFPS of size " << cycle.size() << " found."
+                  << std::endl;
+        continue;
+      }
+      auto ret = efpss.emplace(x);
 
       if (ret.second) {
         // PRint value and size of last efpss
