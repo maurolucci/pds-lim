@@ -91,10 +91,9 @@ int main(int argc, const char **argv) {
   // Parse arguments
   po::options_description desc(argv[0]);
   desc.add_options()("help,h", "show this help");
-  desc.add_options()(
-      "solver,s", po::value<std::string>()->required(),
-      "solver, can be any of "
-      "[brimkov,brimkov2,jovanovic,jovanovic2,fpss,fpss2,cycles,forts,forts2]");
+  desc.add_options()("solver,s", po::value<std::string>()->required(),
+                     "solver, can be any of "
+                     "[brimkov,jovanovic,fpss,efpss,forts]");
   desc.add_options()("n-channels,w", po::value<size_t>()->required(),
                      "number of channels");
   desc.add_options()(
@@ -118,6 +117,10 @@ int main(int argc, const char **argv) {
       "lazy-limit",
       po::value<size_t>()->default_value(std::numeric_limits<size_t>::max()),
       "maximum number of lazy contraints added per callback");
+  desc.add_options()(
+      "cut-limit",
+      po::value<size_t>()->default_value(std::numeric_limits<size_t>::max()),
+      "maximum number of cut constraints added per callback");
   po::positional_options_description pos;
   pos.add("graph", -1);
   po::variables_map vm;
@@ -150,6 +153,7 @@ int main(int argc, const char **argv) {
   bool initFPS2 = vm.count("init-fps-2");
   bool initFPS3 = vm.count("init-fps-3");
   size_t lazyLimit = vm["lazy-limit"].as<size_t>();
+  size_t cutLimit = vm["cut-limit"].as<size_t>();
   std::vector<std::string> inputs;
   if (vm.count("graph")) {
     inputs = vm["graph"].as<std::vector<std::string>>();

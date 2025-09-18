@@ -23,16 +23,18 @@ struct LazyEfpsCB : public GRBCallback {
   std::map<Edge, EdgeList> prec2props;
   std::ostream &cbFile, &solFile;
   size_t lazyLimit;
+  size_t cutLimit;
 
   size_t &totalCallback;
   size_t &totalCallbackTime;
   size_t &totalLazy;
 
   LazyEfpsCB(Pds &input, std::ostream &callbackFile, std::ostream &solutionFile,
-             bool inProp, bool outProp, bool initEFPS, size_t lzLimit)
+             bool inProp, bool outProp, bool initEFPS, size_t lzLimit,
+             size_t cutLimit)
       : mipmodel(), model(*mipmodel.model), s(mipmodel.s), w(mipmodel.w), y(),
         input(input), graph(input.get_graph()), cbFile(callbackFile),
-        solFile(solutionFile), lazyLimit(lzLimit),
+        solFile(solutionFile), lazyLimit(lzLimit), cutLimit(cutLimit),
         totalCallback(mipmodel.totalCallback),
         totalCallbackTime(mipmodel.totalCallbackTime),
         totalLazy(mipmodel.totalLazy) {
@@ -174,7 +176,7 @@ struct LazyEfpsCB : public GRBCallback {
         // Find violated cycles
         PrecedenceDigraph digraph = build_precedence_digraph();
         std::set<std::pair<EdgeList, size_t>> efpss =
-            find_efps_lazy_constraints(digraph, lazyLimit);
+            find_efps_lazy_constraints(digraph);
         std::pair<double, double> avg = addLazyEfpss(efpss);
         totalLazy += efpss.size();
 
@@ -468,18 +470,17 @@ private:
   // Function that finds a set of EFPS constraints to be used as lazy
   // constraints. The size of the cycle is saved in the 2nd components.
   std::set<std::pair<EdgeList, size_t>>
-  find_efps_lazy_constraints(PrecedenceDigraph &digraph, size_t fpssLimit) {
+  find_efps_lazy_constraints(PrecedenceDigraph &digraph) {
     std::set<std::pair<EdgeList, size_t>> efpss;
     // Iterate over the vertices
     for (auto v : boost::make_iterator_range(vertices(digraph))) {
       // Check if the maximum number of FPSs has been found
-      if (efpss.size() >= fpssLimit)
+      if (efpss.size() >= lazyLimit)
         break;
       // Find a chordless cycle (its existence is already guaranteed)
       VertexList cycle = find_chordless_cycle(digraph, v);
       // Map cycle to EFPS
-      EdgeList efps = get_efps(cycle);
-      efpss.insert(std::make_pair(efps, cycle.size()));
+      efpss.emplace(std::make_pair(get_efps(cycle), cycle.size()));
     }
     return efpss;
   }
@@ -546,17 +547,41 @@ private:
     std::set<std::pair<EdgeList, size_t>> efpss;
     // Iterate through edges
     for (auto e : boost::make_iterator_range(edges(digraph))) {
+      // Check if the maximum number of FPSs has been found
+      if (efpss.size() >= cutLimit)
+        break;
       // Find minimum weight cycle containing e
       auto [cycle, weight, ok] = find_min_weight_cycle(digraph, e);
       if (!ok)
         continue;
-      std::cout << "Found cycle of weight " << weight << " and length "
-                << cycle.size() << ": ";
-      for (auto v : cycle)
-        std::cout << v << " ";
-      std::cout << std::endl;
+      // std::cout << "Found cycle of weight " << weight << " and length "
+      //           << cycle.size() << ": ";
+      // for (auto v : cycle)
+      //   std::cout << v << " ";
+      // std::cout << std::endl;
+      // Map cycle to EFPS
+      efpss.emplace(std::make_pair(get_efps(cycle), cycle.size()));
     }
     return efpss;
+  }
+
+  // Function that adds a set of EFPS as cuts
+  std::pair<double, double>
+  addCutEfpss(std::set<std::pair<EdgeList, size_t>> &efpss) {
+    size_t accumCycle = 0;
+    size_t accumExt = 0;
+
+    for (auto &[efps, size] : efpss) {
+      accumCycle += size;
+      accumExt += efps.size();
+      GRBLinExpr pathSum;
+      for (auto [u, v] : efps)
+        pathSum += y.at(std::make_pair(u, v));
+      addCut(pathSum <= size - 1);
+    }
+
+    return std::make_pair(static_cast<double>(accumCycle) / efpss.size(),
+                          static_cast<double>(accumExt) / efpss.size());
   }
 };
 } // end of namespace
@@ -564,9 +589,9 @@ private:
 SolveResult solveLazyEfpss(Pds &input, boost::optional<std::string> logPath,
                            std::ostream &callbackFile, std::ostream &solFile,
                            double timeLimit, bool inProp, bool outProp,
-                           bool initEFPS, size_t lazyLimit) {
+                           bool initEFPS, size_t lazyLimit, size_t cutLimit) {
   LazyEfpsCB lazyEfpss(input, callbackFile, solFile, inProp, outProp, initEFPS,
-                       lazyLimit);
+                       lazyLimit, cutLimit);
   return lazyEfpss.solve(logPath, timeLimit);
 }
 
