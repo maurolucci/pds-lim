@@ -508,9 +508,6 @@ private:
   std::tuple<VertexList, double, bool>
   find_min_weight_cycle(WeightedPrecedenceDigraph &digraph, WeightedArc e) {
 
-    // Remove edge (u,v)
-    boost::remove_edge(e, digraph);
-
     // Find the shortest path from v to u
     auto v = target(e, digraph);
     auto u = source(e, digraph);
@@ -521,9 +518,6 @@ private:
                             boost::distance_map(&distances[0])
                                 .predecessor_map(&predecessors[0])
                                 .weight_map(weight_map));
-
-    // Reinsert edge (u,v)
-    boost::add_edge(u, v, digraph);
 
     // If there is not path from v to u, return false
     if (distances[u] == std::numeric_limits<double>::max())
