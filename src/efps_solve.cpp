@@ -274,10 +274,10 @@ private:
 
   // Function to add an edge (u,v) to the weighted precedence digraph if not
   // already present, or update its weight otherwise
-  void add_edge_if_needed(Vertex u, Vertex v,
+  void add_edge_if_needed(Vertex u, Vertex v, double weight,
                           WeightedPrecedenceDigraph &digraph,
                           std::map<Vertex, WeightedNode> &name,
-                          EdgeWeightMap &weight) {
+                          EdgeWeightMap &weightMap) {
     if (!name.contains(v))
       name[v] = boost::add_vertex(LabelledVertex{.label = v}, digraph);
     if (!name.contains(u))
@@ -285,13 +285,11 @@ private:
     if (!boost::edge(name[u], name[v], digraph).second) {
       std::cout << getNodeRel(y.at(std::make_pair(u, v))) << std::endl;
       auto e = boost::add_edge(name[u], name[v], digraph).first;
-      boost::put(weight, e,
-                 std::max(0.0, 1.0 - getNodeRel(y.at(std::make_pair(u, v)))));
+      boost::put(weightMap, e, std::max(0.0, 1.0 - weight));
     } else {
       auto e = boost::edge(name[u], name[v], digraph).first;
-      boost::put(weight, e,
-                 std::max(0.0, boost::get(weight, e) -
-                                   getNodeRel(y.at(std::make_pair(u, v)))));
+      boost::put(weightMap, e,
+                 std::max(0.0, boost::get(weightMap, e) - weight));
     }
   }
 
@@ -299,21 +297,22 @@ private:
   // current propagations
   WeightedPrecedenceDigraph build_weighted_precedence_digraph() {
     WeightedPrecedenceDigraph digraph;
-    EdgeWeightMap weight = boost::get(boost::edge_weight, digraph);
+    EdgeWeightMap weightMap = boost::get(boost::edge_weight, digraph);
     std::map<Vertex, WeightedNode> name;
     for (auto v : boost::make_iterator_range(vertices(graph))) {
       for (auto u :
            boost::make_iterator_range(boost::adjacent_vertices(v, graph))) {
         if (!input.isZeroInjection(u))
           continue;
-        if (getNodeRel(y.at(std::make_pair(u, v))) < EPSILON)
+        double weight = getNodeRel(y.at(std::make_pair(u, v)));
+        if (weight < EPSILON)
           continue;
-        add_edge_if_needed(u, v, digraph, name, weight);
+        add_edge_if_needed(u, v, weight, digraph, name, weightMap);
         for (auto w :
              boost::make_iterator_range(boost::adjacent_vertices(u, graph))) {
           if (w == v)
             continue;
-          add_edge_if_needed(w, v, digraph, name, weight);
+          add_edge_if_needed(w, v, weight, digraph, name, weightMap);
         }
       }
     }
