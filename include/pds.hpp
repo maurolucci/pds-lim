@@ -35,7 +35,7 @@ using PrecedenceDigraph =
 using Node = PrecedenceDigraph::vertex_descriptor;
 
 using WeightedPrecedenceDigraph =
-    boost::adjacency_list<boost::listS, boost::vecS, boost::bidirectionalS,
+    boost::adjacency_list<boost::vecS, boost::vecS, boost::bidirectionalS,
                           LabelledVertex,
                           boost::property<boost::edge_weight_t, double>>;
 using WeightedNode = WeightedPrecedenceDigraph::vertex_descriptor;
