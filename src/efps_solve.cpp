@@ -507,15 +507,10 @@ private:
     std::vector<double> distances(num_vertices(digraph));
     std::vector<WeightedNode> predecessors(num_vertices(digraph));
     auto weight_map = boost::get(boost::edge_weight, digraph);
-    dijkstra_shortest_paths(
-        digraph, v,
-        boost::distance_map(distances)
-            .predecessor_map(predecessors)
-            .weight_map(weight_map)
-            .distance_compare(std::less<double>())
-            .distance_combine(std::plus<double>())
-            .distance_zero(0.0)
-            .distance_inf(std::numeric_limits<double>::infinity()));
+    dijkstra_shortest_paths(digraph, v,
+                            boost::distance_map(&distances[0])
+                                .predecessor_map(&predecessors[0])
+                                .weight_map(weight_map));
 
     std::cout << "distances and parents:" << std::endl;
     auto [vi, vend] = vertices(digraph);
