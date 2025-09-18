@@ -51,9 +51,12 @@ struct SolveResult {
   double gap;
   double nodes;
   SolveState state;
-  size_t totalCallback;
-  size_t totalCallbackTime;
-  size_t totalLazy;
+  size_t totalLazyCBCalls;
+  size_t totalLazyCBTime;
+  size_t totalLazyAdded;
+  size_t totalCutCBCalls;
+  size_t totalCutCBTime;
+  size_t totalCutAdded;
 };
 
 class Pds {
