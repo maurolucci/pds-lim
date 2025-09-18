@@ -267,7 +267,8 @@ int main(int argc, const char **argv) {
       std::string stats(fmt::format(
           "{solver},{name},{n},{m},{zi},{channels},{variables},{"
           "constraints},{run},{lower_bound},{upper_bound},{gap},{result}"
-          ",{nodes},{t_solver},{lazy_calls},{lazy_time},{lazy_added},{cut_calls},{cut_time},{cut_added}\n",
+          ",{nodes},{t_solver},{lazy_calls},{lazy_time},{lazy_added},{cut_"
+          "calls},{cut_time},{cut_added}\n",
           "solver"_a = solver, "name"_a = filename, "n"_a = n, "m"_a = m,
           "zi"_a = zi, "channels"_a = n_channels,
           "variables"_a = result.variables,
@@ -283,7 +284,7 @@ int main(int argc, const char **argv) {
           "lazy_added"_a = result.totalLazyAdded,
           "cut_calls"_a = result.totalCutCBCalls,
           "cut_time"_a = result.totalCutCBTime,
-          "cut_added"_a = result.totalCutAdded);
+          "cut_added"_a = result.totalCutAdded));
       if (vm.count("outdir")) {
         std::ofstream statFile(outDirs["stat"], std::ofstream::out);
         statFile << stats;
