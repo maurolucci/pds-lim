@@ -207,7 +207,7 @@ struct LazyEfpsCB : public GRBCallback {
     }
     // Node callback
     case GRB_CB_MIPNODE: {
-      if (!useCuts /*|| getDoubleInfo(GRB_CB_MIPNODE_NODCNT) > 0.0*/)
+      if (!useCuts || getDoubleInfo(GRB_CB_MIPNODE_NODCNT) > 0.0)
         break;
       if (getIntInfo(GRB_CB_MIPNODE_STATUS) == GRB_OPTIMAL) {
 
