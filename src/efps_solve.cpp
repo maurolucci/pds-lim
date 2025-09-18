@@ -212,7 +212,7 @@ struct LazyEfpsCB : public GRBCallback {
         // Build weighted precedence digraph
         WeightedPrecedenceDigraph digraph = build_weighted_precedence_digraph();
         // Find violated cycles
-        std::set<VertexList> efpss = find_efps_cuts(digraph);
+        std::set<std::pair<EdgeList, size_t>> efpss = find_efps_cuts(digraph);
         if (efpss.size() == 0)
           break;
         std::pair<double, double> avg = addCutEfpss(efpss);
@@ -485,7 +485,7 @@ private:
   }
 
   // Function thats maps a cycle to an EFPS
-  EdgeList get_efps(const VertexList &cycle) {
+  EdgeList get_efps(VertexList &cycle) {
     EdgeList efps;
     for (auto it = cycle.rbegin(); it != cycle.rend();) {
       Vertex v = *it++;
@@ -493,6 +493,8 @@ private:
       for (auto &e : prec2props.at(std::make_pair(v, u)))
         efps.push_back(e);
     }
+    // Sort the EFPS to avoid duplicates
+    std::sort(efps.begin(), efps.end());
     return efps;
   }
 
@@ -570,8 +572,10 @@ private:
   }
 
   // Function that finds a set of EFPS constraints to be used as cuts.
-  std::set<VertexList> find_efps_cuts(WeightedPrecedenceDigraph &digraph) {
-    std::set<VertexList> efpss;
+  // The size of the cycle is saved in the 2nd components.
+  std::set<std::pair<EdgeList, size_t>>
+  find_efps_cuts(WeightedPrecedenceDigraph &digraph) {
+    std::set<std::pair<EdgeList, size_t>> efpss;
     // Iterate through edges
     for (auto e : boost::make_iterator_range(edges(digraph))) {
       // Check if the maximum number of FPSs has been found
@@ -581,31 +585,25 @@ private:
       auto [cycle, weight, ok] = find_min_weight_cycle(digraph, e);
       if (!ok)
         continue;
-      auto ret = efpss.emplace(cycle);
-      if (ret.second) {
-        std::cout << fmt::format("Found cycle of weight {:.4f}\n", weight);
-        // Print the elements of the cycle
-        std::cout << "Cycle elements: ";
-        for (auto v : cycle)
-          std::cout << fmt::format("{} ", v);
-        std::cout << std::endl;
-      }
+      // Map cycle to EFPS
+      efpss.emplace(std::make_pair(get_efps(cycle), cycle.size()));
     }
     return efpss;
   }
 
   // Function that adds a set of EFPS as cuts
-  std::pair<double, double> addCutEfpss(std::set<VertexList> &efpss) {
+  std::pair<double, double>
+  addCutEfpss(std::set<std::pair<EdgeList, size_t>> &efpss) {
     size_t accumCycle = 0;
     size_t accumExt = 0;
-    for (auto &cycle : efpss) {
-      accumCycle += cycle.size();
-      EdgeList efps = get_efps(cycle);
+
+    for (auto &[efps, size] : efpss) {
+      accumCycle += size;
       accumExt += efps.size();
       GRBLinExpr pathSum;
       for (auto [u, v] : efps)
         pathSum += y.at(std::make_pair(u, v));
-      addCut(pathSum <= cycle.size() - 1);
+      addCut(pathSum <= size - 1);
     }
 
     return std::make_pair(static_cast<double>(accumCycle) / efpss.size(),
