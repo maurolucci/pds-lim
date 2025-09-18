@@ -493,8 +493,6 @@ private:
       for (auto &e : prec2props.at(std::make_pair(v, u)))
         efps.push_back(e);
     }
-    // Sort the EFPS to avoid duplicates
-    efps.sort();
     return efps;
   }
 
@@ -529,7 +527,6 @@ private:
         pathSum += y.at(std::make_pair(u, v));
       addLazy(pathSum <= size - 1);
     }
-
     return std::make_pair(static_cast<double>(accumCycle) / efpss.size(),
                           static_cast<double>(accumExt) / efpss.size());
   }
@@ -586,16 +583,7 @@ private:
       if (!ok)
         continue;
       // Map cycle to EFPS
-      auto ret = efpss.emplace(std::make_pair(get_efps(cycle), cycle.size()));
-      if (ret.second) { // New EFPS added
-        std::cout << "New EFPS with elements: ";
-        for (auto &e : get_efps(cycle))
-          std::cout << fmt::format("{} ", e);
-        std::cout << " that imposes the cycle: ";
-        for (auto &v : cycle)
-          std::cout << fmt::format("{} ", v);
-        std::cout << std::endl;
-      }
+      efpss.emplace(std::make_pair(get_efps(cycle), cycle.size()));
     }
     return efpss;
   }
