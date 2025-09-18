@@ -23,6 +23,7 @@ struct LazyEfpsCB : public GRBCallback {
   std::map<Edge, EdgeList> prec2props;
   std::ostream &cbFile, &solFile;
   size_t lazyLimit;
+  bool useCuts;
   size_t cutLimit;
 
   size_t &totalLazyCBCalls;
@@ -35,11 +36,11 @@ struct LazyEfpsCB : public GRBCallback {
 
   LazyEfpsCB(Pds &input, std::ostream &callbackFile, std::ostream &solutionFile,
              bool inProp, bool outProp, bool initEFPS, size_t lzLimit,
-             size_t cutLimit)
+             bool useCuts, size_t cutLimit)
       : mipmodel(), model(*mipmodel.model), s(mipmodel.s), w(mipmodel.w), y(),
         input(input), graph(input.get_graph()), cbFile(callbackFile),
-        solFile(solutionFile), lazyLimit(lzLimit), cutLimit(cutLimit),
-        totalLazyCBCalls(mipmodel.totalLazyCBCalls),
+        solFile(solutionFile), lazyLimit(lzLimit), useCuts(useCuts),
+        cutLimit(cutLimit), totalLazyCBCalls(mipmodel.totalLazyCBCalls),
         totalLazyCBTime(mipmodel.totalLazyCBTime),
         totalLazyAdded(mipmodel.totalLazyAdded),
         totalCutCBCalls(mipmodel.totalCutCBCalls),
@@ -204,6 +205,8 @@ struct LazyEfpsCB : public GRBCallback {
     }
     // Node callback
     case GRB_CB_MIPNODE: {
+      if (!useCuts)
+        break;
       if (getIntInfo(GRB_CB_MIPNODE_STATUS) == GRB_OPTIMAL) {
 
         auto t0 = std::chrono::high_resolution_clock::now();
@@ -612,9 +615,10 @@ private:
 SolveResult solveLazyEfpss(Pds &input, boost::optional<std::string> logPath,
                            std::ostream &callbackFile, std::ostream &solFile,
                            double timeLimit, bool inProp, bool outProp,
-                           bool initEFPS, size_t lazyLimit, size_t cutLimit) {
+                           bool initEFPS, size_t lazyLimit, bool useCuts,
+                           size_t cutLimit) {
   LazyEfpsCB lazyEfpss(input, callbackFile, solFile, inProp, outProp, initEFPS,
-                       lazyLimit, cutLimit);
+                       lazyLimit, useCuts, cutLimit);
   return lazyEfpss.solve(logPath, timeLimit);
 }
 

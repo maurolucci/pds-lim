@@ -113,6 +113,7 @@ int main(int argc, const char **argv) {
   desc.add_options()("init-fps-1", "consider initial FPS constraints type 1");
   desc.add_options()("init-fps-2", "consider initial FPS constraints type 2");
   desc.add_options()("init-fps-3", "consider initial FPS constraints type 3");
+  desc.add_options()("cuts", "consider EFPS cuts");
   desc.add_options()(
       "lazy-limit",
       po::value<size_t>()->default_value(std::numeric_limits<size_t>::max()),
@@ -152,6 +153,7 @@ int main(int argc, const char **argv) {
   bool initFPS1 = vm.count("init-fps-1");
   bool initFPS2 = vm.count("init-fps-2");
   bool initFPS3 = vm.count("init-fps-3");
+  bool useCuts = vm.count("cuts");
   size_t lazyLimit = vm["lazy-limit"].as<size_t>();
   size_t cutLimit = vm["cut-limit"].as<size_t>();
   std::vector<std::string> inputs;
@@ -189,6 +191,8 @@ int main(int argc, const char **argv) {
     solver.append("-init2");
   if (initFPS3)
     solver.append("-init3");
+  if (useCuts)
+    solver.append("-cuts");
 
   // Read inputs
   for (const std::string &filename : inputs) {
@@ -242,7 +246,7 @@ int main(int argc, const char **argv) {
         if (solverName == "efpss") {
           result = solveLazyEfpss(input, logPath, output.cbFile, output.solFile,
                                   timeout, inProp, outProp, initEFPS, lazyLimit,
-                                  cutLimit);
+                                  useCuts, cutLimit);
         } else if (solverName == "fpss") {
           result = solveLazyFpss(input, logPath, output.cbFile, output.solFile,
                                  timeout, inProp, outProp, initFPS1, initFPS2,
