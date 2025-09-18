@@ -248,15 +248,11 @@ private:
       for (auto u :
            boost::make_iterator_range(boost::adjacent_vertices(v, graph))) {
         prec2props[std::make_pair(v, u)].push_back(std::make_pair(v, u));
-        std::cout << "Propagation (" << v << "," << u
-                  << ") imposes precedence (" << v << "," << u << ")\n";
         for (auto w :
              boost::make_iterator_range(boost::adjacent_vertices(v, graph))) {
           if (w == u)
             continue;
           prec2props[std::make_pair(w, u)].push_back(std::make_pair(v, u));
-          std::cout << "Propagation (" << v << "," << u
-                    << ") imposes precedence (" << w << "," << u << ")\n";
         }
       }
     }
