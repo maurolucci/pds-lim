@@ -34,6 +34,12 @@ using PrecedenceDigraph =
                           LabelledVertex>;
 using Node = PrecedenceDigraph::vertex_descriptor;
 
+using WeightedPrecedenceDigraph =
+    boost::adjacency_list<boost::listS, boost::vecS, boost::bidirectionalS,
+                          LabelledVertex,
+                          boost::property<boost::edge_weight_t, double>>;
+using WeightedNode = WeightedPrecedenceDigraph::vertex_descriptor;
+
 enum class SolveState { Optimal, Timeout, Infeasible, Other };
 
 struct SolveResult {
@@ -50,7 +56,7 @@ struct SolveResult {
 };
 
 class Pds {
- private:
+private:
   PowerGrid graph;
   size_t n_channels;
   VertexList activated;
@@ -75,7 +81,7 @@ class Pds {
   void propagate_from(std::list<Vertex> &candidates,
                       std::list<Vertex> &turnedOn);
 
- public:
+public:
   Pds();
   explicit Pds(PowerGrid &&graph, size_t n_channels);
   explicit Pds(const PowerGrid &graph, size_t n_channels);
@@ -137,8 +143,8 @@ class Pds {
   [[nodiscard]] bool check_get_monitored_set(std::map<Vertex, double> &s,
                                              std::map<Edge, double> &w);
 
-};  // end of class Pds
+}; // end of class Pds
 
-}  // end of namespace pds
+} // end of namespace pds
 
-#endif  // PDS_HPP
+#endif // PDS_HPP
