@@ -22,7 +22,7 @@ struct LazyFpsCB : public GRBCallback {
   // Map from precedence to list of propagations
   std::map<Edge, EdgeList> prec2props;
   std::ostream &cbFile, &solFile;
-  size_t lazyLimit;
+  size_t lazyMax;
 
   size_t &totalLazyCBCalls;
   size_t &totalLazyCBTime;
@@ -30,10 +30,10 @@ struct LazyFpsCB : public GRBCallback {
 
   LazyFpsCB(Pds &input, std::ostream &callbackFile, std::ostream &solutionFile,
             bool inProp, bool outProp, bool initFPS1, bool initFPS2,
-            bool initFPS3, size_t lzLimit)
+            bool initFPS3, size_t lazyMax)
       : mipmodel(), model(*mipmodel.model), s(mipmodel.s), w(mipmodel.w), y(),
         input(input), graph(input.get_graph()), cbFile(callbackFile),
-        solFile(solutionFile), lazyLimit(lzLimit),
+        solFile(solutionFile), lazyMax(lazyMax),
         totalLazyCBCalls(mipmodel.totalLazyCBCalls),
         totalLazyCBTime(mipmodel.totalLazyCBTime),
         totalLazyAdded(mipmodel.totalLazyAdded) {
@@ -203,7 +203,7 @@ struct LazyFpsCB : public GRBCallback {
       if (!input.isFeasible()) {
         // Find violated fpss
         PrecedenceDigraph digraph = build_precedence_digraph();
-        std::set<EdgeList> fpss = find_fpss(digraph, lazyLimit);
+        std::set<EdgeList> fpss = find_fpss(digraph, lazyMax);
         double avg = addLazyFpss(fpss);
         totalLazyAdded += fpss.size();
 
@@ -488,9 +488,9 @@ SolveResult solveLazyFpss(Pds &input, boost::optional<std::string> logPath,
                           std::ostream &callbackFile, std::ostream &solFile,
                           double timeLimit, bool inProp, bool outProp,
                           bool initFPS1, bool initFPS2, bool initFPS3,
-                          size_t lazyLimit) {
+                          size_t lazyMax) {
   LazyFpsCB lazyFpss(input, callbackFile, solFile, inProp, outProp, initFPS1,
-                     initFPS2, initFPS3, lazyLimit);
+                     initFPS2, initFPS3, lazyMax);
   return lazyFpss.solve(logPath, timeLimit);
 }
 

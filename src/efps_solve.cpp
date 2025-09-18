@@ -22,9 +22,10 @@ struct LazyEfpsCB : public GRBCallback {
   // Map from precedence to list of propagations
   std::map<Edge, EdgeList> prec2props;
   std::ostream &cbFile, &solFile;
-  size_t lazyLimit;
+  size_t lazyMax;
   bool useCuts;
-  size_t cutLimit;
+  size_t cutMax;
+  size_t cutNodes;
 
   size_t &totalLazyCBCalls;
   size_t &totalLazyCBTime;
@@ -35,12 +36,13 @@ struct LazyEfpsCB : public GRBCallback {
   size_t &totalCutAdded;
 
   LazyEfpsCB(Pds &input, std::ostream &callbackFile, std::ostream &solutionFile,
-             bool inProp, bool outProp, bool initEFPS, size_t lzLimit,
-             bool useCuts, size_t cutLimit)
+             bool inProp, bool outProp, bool initEFPS, size_t lazyMax,
+             bool useCuts, size_t cutMax, size_t cutNodes)
       : mipmodel(), model(*mipmodel.model), s(mipmodel.s), w(mipmodel.w), y(),
         input(input), graph(input.get_graph()), cbFile(callbackFile),
-        solFile(solutionFile), lazyLimit(lzLimit), useCuts(useCuts),
-        cutLimit(cutLimit), totalLazyCBCalls(mipmodel.totalLazyCBCalls),
+        solFile(solutionFile), lazyMax(lazyMax), useCuts(useCuts),
+        cutMax(cutMax), cutNodes(cutNodes),
+        totalLazyCBCalls(mipmodel.totalLazyCBCalls),
         totalLazyCBTime(mipmodel.totalLazyCBTime),
         totalLazyAdded(mipmodel.totalLazyAdded),
         totalCutCBCalls(mipmodel.totalCutCBCalls),
@@ -207,7 +209,7 @@ struct LazyEfpsCB : public GRBCallback {
     }
     // Node callback
     case GRB_CB_MIPNODE: {
-      if (!useCuts || getDoubleInfo(GRB_CB_MIPNODE_NODCNT) > 0.0)
+      if (!useCuts || getDoubleInfo(GRB_CB_MIPNODE_NODCNT) >= cutNodes)
         break;
       if (getIntInfo(GRB_CB_MIPNODE_STATUS) == GRB_OPTIMAL) {
 
@@ -509,7 +511,7 @@ private:
     // Iterate over the vertices
     for (auto v : boost::make_iterator_range(vertices(digraph))) {
       // Check if the maximum number of FPSs has been found
-      if (efpss.size() >= lazyLimit)
+      if (efpss.size() >= lazyMax)
         break;
       // Find a chordless cycle (its existence is already guaranteed)
       VertexList cycle = find_chordless_cycle(digraph, v);
@@ -581,7 +583,7 @@ private:
     // Iterate through edges
     for (auto e : boost::make_iterator_range(edges(digraph))) {
       // Check if the maximum number of FPSs has been found
-      if (efpss.size() >= cutLimit)
+      if (efpss.size() >= cutMax)
         break;
       // Find minimum weight cycle containing e
       auto [cycle, weight, ok] = find_min_weight_cycle(digraph, e);
@@ -617,10 +619,10 @@ private:
 SolveResult solveLazyEfpss(Pds &input, boost::optional<std::string> logPath,
                            std::ostream &callbackFile, std::ostream &solFile,
                            double timeLimit, bool inProp, bool outProp,
-                           bool initEFPS, size_t lazyLimit, bool useCuts,
-                           size_t cutLimit) {
+                           bool initEFPS, size_t lazyMax, bool useCuts,
+                           size_t cutMax, size_t cutNodes) {
   LazyEfpsCB lazyEfpss(input, callbackFile, solFile, inProp, outProp, initEFPS,
-                       lazyLimit, useCuts, cutLimit);
+                       lazyMax, useCuts, cutMax, cutNodes);
   return lazyEfpss.solve(logPath, timeLimit);
 }
 

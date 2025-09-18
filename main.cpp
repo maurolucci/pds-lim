@@ -115,13 +115,17 @@ int main(int argc, const char **argv) {
   desc.add_options()("init-fps-3", "consider initial FPS constraints type 3");
   desc.add_options()("cuts", "consider EFPS cuts");
   desc.add_options()(
-      "lazy-limit",
+      "lazy-max",
       po::value<size_t>()->default_value(std::numeric_limits<size_t>::max()),
       "maximum number of lazy contraints added per callback");
   desc.add_options()(
-      "cut-limit",
+      "cut-max",
       po::value<size_t>()->default_value(std::numeric_limits<size_t>::max()),
       "maximum number of cut constraints added per callback");
+  desc.add_options()(
+      "cut-nodes",
+      po::value<size_t>()->default_value(std::numeric_limits<size_t>::max()),
+      "maximum number of nodes for using cut callback");
   po::positional_options_description pos;
   pos.add("graph", -1);
   po::variables_map vm;
@@ -154,8 +158,9 @@ int main(int argc, const char **argv) {
   bool initFPS2 = vm.count("init-fps-2");
   bool initFPS3 = vm.count("init-fps-3");
   bool useCuts = vm.count("cuts");
-  size_t lazyLimit = vm["lazy-limit"].as<size_t>();
-  size_t cutLimit = vm["cut-limit"].as<size_t>();
+  size_t lazyMax = vm["lazy-max"].as<size_t>();
+  size_t cutMax = vm["cut-max"].as<size_t>();
+  size_t cutNodes = vm["cut-nodes"].as<size_t>();
   std::vector<std::string> inputs;
   if (vm.count("graph")) {
     inputs = vm["graph"].as<std::vector<std::string>>();
@@ -191,8 +196,13 @@ int main(int argc, const char **argv) {
     solver.append("-init2");
   if (initFPS3)
     solver.append("-init3");
-  if (useCuts)
+  if (useCuts) {
     solver.append("-cuts");
+    if (cutMax < std::numeric_limits<size_t>::max())
+      solver.append(fmt::format("-m{}", cutMax));
+    if (cutNodes < std::numeric_limits<size_t>::max())
+      solver.append(fmt::format("-n{}", cutNodes));
+  }
 
   // Read inputs
   for (const std::string &filename : inputs) {
@@ -245,15 +255,15 @@ int main(int argc, const char **argv) {
       try {
         if (solverName == "efpss") {
           result = solveLazyEfpss(input, logPath, output.cbFile, output.solFile,
-                                  timeout, inProp, outProp, initEFPS, lazyLimit,
-                                  useCuts, cutLimit);
+                                  timeout, inProp, outProp, initEFPS, lazyMax,
+                                  useCuts, cutMax, cutNodes);
         } else if (solverName == "fpss") {
           result = solveLazyFpss(input, logPath, output.cbFile, output.solFile,
                                  timeout, inProp, outProp, initFPS1, initFPS2,
-                                 initFPS3, lazyLimit);
+                                 initFPS3, lazyMax);
         } else if (solverName == "forts") {
           result = solveLazyForts(input, logPath, output.cbFile, output.solFile,
-                                  timeout, lazyLimit);
+                                  timeout, lazyMax);
         } else {
           Solver solve = getSolver(vm);
           result = solve(input, logPath, output.solFile, timeout);
