@@ -591,6 +591,9 @@ private:
         std::cout << "New EFPS with elements: ";
         for (auto &e : get_efps(cycle))
           std::cout << fmt::format("{} ", e);
+        std::cout << " that imposes the cycle: ";
+        for (auto &v : cycle)
+          std::cout << fmt::format("{} ", v);
         std::cout << std::endl;
       }
     }
