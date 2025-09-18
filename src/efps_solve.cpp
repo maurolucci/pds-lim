@@ -581,7 +581,15 @@ private:
       auto [cycle, weight, ok] = find_min_weight_cycle(digraph, e);
       if (!ok)
         continue;
-      efpss.emplace(cycle);
+      auto ret = efpss.emplace(cycle);
+      if (ret.second) {
+        std::cout << fmt::format("Found cycle of weight {:.4f}\n", weight);
+        // Print the elements of the cycle
+        std::cout << "Cycle elements: ";
+        for (auto v : cycle)
+          std::cout << fmt::format("{} ", v);
+        std::cout << std::endl;
+      }
     }
     return efpss;
   }
