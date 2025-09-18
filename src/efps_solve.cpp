@@ -495,6 +495,10 @@ private:
     }
     // Sort the EFPS to avoid duplicates
     efps.sort();
+    // Print the EFPS
+    for (auto &e : efps)
+      std::cout << fmt::format("({}, {}) ", e.first, e.second);
+    std::cout << std::endl;
     return efps;
   }
 
