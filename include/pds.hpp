@@ -39,6 +39,7 @@ using WeightedPrecedenceDigraph =
                           LabelledVertex,
                           boost::property<boost::edge_weight_t, double>>;
 using WeightedNode = WeightedPrecedenceDigraph::vertex_descriptor;
+using WeightedArc = WeightedPrecedenceDigraph::edge_descriptor;
 
 enum class SolveState { Optimal, Timeout, Infeasible, Other };
 
