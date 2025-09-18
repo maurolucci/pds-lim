@@ -285,12 +285,12 @@ private:
     if (!boost::edge(name[u], name[v], digraph).second) {
       auto e = boost::add_edge(name[u], name[v], digraph).first;
       boost::put(weight, e,
-                 std::max(0.0, 1.0 - getSolution(y.at(std::make_pair(u, v)))));
+                 std::max(0.0, 1.0 - cbGetNodeRel(y.at(std::make_pair(u, v)))));
     } else {
       auto e = boost::edge(name[u], name[v], digraph).first;
       boost::put(weight, e,
                  std::max(0.0, boost::get(weight, e) -
-                                   getSolution(y.at(std::make_pair(u, v)))));
+                                   cbGetNodeRel(y.at(std::make_pair(u, v)))));
     }
   }
 
@@ -305,7 +305,7 @@ private:
            boost::make_iterator_range(boost::adjacent_vertices(v, graph))) {
         if (!input.isZeroInjection(u))
           continue;
-        if (getSolution(y.at(std::make_pair(u, v))) < EPSILON)
+        if (cbGetNodeRel(y.at(std::make_pair(u, v))) < EPSILON)
           continue;
         add_edge_if_needed(u, v, digraph, name, weight);
         for (auto w :
