@@ -283,6 +283,7 @@ private:
     if (!name.contains(u))
       name[u] = boost::add_vertex(LabelledVertex{.label = u}, digraph);
     if (!boost::edge(name[u], name[v], digraph).second) {
+      std::cout << getNodeRel(y.at(std::make_pair(u, v))) << std::endl;
       auto e = boost::add_edge(name[u], name[v], digraph).first;
       boost::put(weight, e,
                  std::max(0.0, 1.0 - getNodeRel(y.at(std::make_pair(u, v)))));
