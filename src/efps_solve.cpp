@@ -25,9 +25,13 @@ struct LazyEfpsCB : public GRBCallback {
   size_t lazyLimit;
   size_t cutLimit;
 
-  size_t &totalCallback;
-  size_t &totalCallbackTime;
-  size_t &totalLazy;
+  size_t &totalLazyCBCalls;
+  size_t &totalLazyCBTime;
+  size_t &totalLazyAdded;
+
+  size_t &totalCutCBCalls;
+  size_t &totalCutCBTime;
+  size_t &totalCutAdded;
 
   LazyEfpsCB(Pds &input, std::ostream &callbackFile, std::ostream &solutionFile,
              bool inProp, bool outProp, bool initEFPS, size_t lzLimit,
@@ -35,9 +39,12 @@ struct LazyEfpsCB : public GRBCallback {
       : mipmodel(), model(*mipmodel.model), s(mipmodel.s), w(mipmodel.w), y(),
         input(input), graph(input.get_graph()), cbFile(callbackFile),
         solFile(solutionFile), lazyLimit(lzLimit), cutLimit(cutLimit),
-        totalCallback(mipmodel.totalCallback),
-        totalCallbackTime(mipmodel.totalCallbackTime),
-        totalLazy(mipmodel.totalLazy) {
+        totalLazyCBCalls(mipmodel.totalLazyCBCalls),
+        totalLazyCBTime(mipmodel.totalLazyCBTime),
+        totalLazyAdded(mipmodel.totalLazyAdded),
+        totalCutCBCalls(mipmodel.totalCutCBCalls),
+        totalCutCBTime(mipmodel.totalCutCBTime),
+        totalCutAdded(mipmodel.totalCutAdded) {
     size_t n_channels = input.get_n_channels();
 
     model.setCallback(this);
@@ -151,7 +158,7 @@ struct LazyEfpsCB : public GRBCallback {
     // incumbent)
     case GRB_CB_MIPSOL: {
       auto t0 = std::chrono::high_resolution_clock::now();
-      totalCallback++;
+      totalLazyCBCalls++;
 
       // Update solution
       for (auto v : boost::make_iterator_range(vertices(graph))) {
@@ -178,17 +185,18 @@ struct LazyEfpsCB : public GRBCallback {
         std::set<std::pair<EdgeList, size_t>> efpss =
             find_efps_lazy_constraints(digraph);
         std::pair<double, double> avg = addLazyEfpss(efpss);
-        totalLazy += efpss.size();
+        totalLazyAdded += efpss.size();
 
         // Report to callback file
-        cbFile << fmt::format(
-                      "# efps: {}, avg. size: {:.2f}, avg. ext. size: {:.2f}",
-                      efpss.size(), avg.first, avg.second)
-               << std::endl;
+        cbFile
+            << fmt::format(
+                   "# lazy efps: {}, avg. size: {:.2f}, avg. ext. size: {:.2f}",
+                   efpss.size(), avg.first, avg.second)
+            << std::endl;
       }
 
       auto t1 = std::chrono::high_resolution_clock::now();
-      totalCallbackTime +=
+      totalLazyCBTime +=
           std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0)
               .count();
 
@@ -197,10 +205,29 @@ struct LazyEfpsCB : public GRBCallback {
     // Node callback
     case GRB_CB_MIPNODE: {
       if (getIntInfo(GRB_CB_MIPNODE_STATUS) == GRB_OPTIMAL) {
+
+        auto t0 = std::chrono::high_resolution_clock::now();
+        totalCutCBCalls++;
+
         // Build weighted precedence digraph
         WeightedPrecedenceDigraph digraph = build_weighted_precedence_digraph();
         // Find violated cycles
         std::set<std::pair<EdgeList, size_t>> efpss = find_efps_cuts(digraph);
+        std::pair<double, double> avg = addCutEfpss(efpss);
+        totalCutAdded += efpss.size();
+
+        // Report to callback file
+        cbFile
+            << fmt::format(
+                   "# cut efps: {}, avg. size: {:.2f}, avg. ext. size: {:.2f}",
+                   efpss.size(), avg.first, avg.second)
+            << std::endl;
+
+        // Time spent
+        auto t1 = std::chrono::high_resolution_clock::now();
+        totalCutCBTime +=
+            std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0)
+                .count();
       }
 
       break;

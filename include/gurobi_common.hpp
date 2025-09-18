@@ -11,13 +11,21 @@
 namespace pds {
 
 struct MIPModel {
+
+  // Model and variables
   std::unique_ptr<GRBModel> model;
   std::map<Vertex, GRBVar> s;
   std::map<Edge, GRBVar> w;
 
-  size_t totalCallback;
-  size_t totalCallbackTime;
-  size_t totalLazy;
+  // Lazy callback statistics
+  size_t totalLazyCBCalls;
+  size_t totalLazyCBTime;
+  size_t totalLazyAdded;
+
+  // Cut callback statistics
+  size_t totalCutCBCalls;
+  size_t totalCutCBTime;
+  size_t totalCutAdded;
 
   MIPModel();
   MIPModel(MIPModel &&other) = default;
