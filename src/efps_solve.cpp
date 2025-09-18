@@ -565,13 +565,6 @@ private:
     // Rotate the cycle so the minimum element is in the front
     boost::range::rotate(path, boost::range::min_element(path));
 
-    // print the cycle
-    std::cout << "Cycle found: ";
-    for (auto vert : path)
-      std::cout << vert << " ";
-    std::cout << " with weight " << distances[u] + boost::get(weight_map, e)
-              << std::endl;
-
     return std::make_tuple(path, distances[u] + boost::get(weight_map, e),
                            true);
   }
@@ -590,11 +583,6 @@ private:
       auto [cycle, weight, ok] = find_min_weight_cycle(digraph, e);
       if (!ok)
         continue;
-      // std::cout << "Found cycle of weight " << weight << " and length "
-      //           << cycle.size() << ": ";
-      // for (auto v : cycle)
-      //   std::cout << v << " ";
-      // std::cout << std::endl;
       // Map cycle to EFPS
       efpss.emplace(std::make_pair(get_efps(cycle), cycle.size()));
     }
