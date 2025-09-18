@@ -149,6 +149,8 @@ struct LazyEfpsCB : public GRBCallback {
       model.set(GRB_IntParam_LogToConsole, false);
     }
     model.set(GRB_IntParam_LazyConstraints, 1);
+    if (useCuts)
+      model.set(GRB_IntParam_PreCrush, 1);
     return solveMIP(input, mipmodel, logPath, solFile, timeLimit);
   }
 
