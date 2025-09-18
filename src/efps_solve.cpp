@@ -495,10 +495,6 @@ private:
     }
     // Sort the EFPS to avoid duplicates
     efps.sort();
-    // Print the EFPS
-    for (auto &e : efps)
-      std::cout << fmt::format("({}, {}) ", e.first, e.second);
-    std::cout << std::endl;
     return efps;
   }
 
@@ -590,7 +586,13 @@ private:
       if (!ok)
         continue;
       // Map cycle to EFPS
-      efpss.emplace(std::make_pair(get_efps(cycle), cycle.size()));
+      auto ret = efpss.emplace(std::make_pair(get_efps(cycle), cycle.size()));
+      if (ret.second) { // New EFPS added
+        std::cout << "New EFPS with elements: ";
+        for (auto &e : get_efps(cycle))
+          std::cout << fmt::format("{} ", e);
+        std::cout << std::endl;
+      }
     }
     return efpss;
   }
