@@ -510,6 +510,12 @@ private:
       VertexList cycle = find_chordless_cycle(digraph, v);
       // Map cycle to EFPS
       efpss.emplace(std::make_pair(get_efps(cycle), cycle.size()));
+      // PRint value and size of last efpss
+      std::cout << "Found EFPS of size " << cycle.size() << " with value ";
+      double val = 0.0;
+      for (auto [u, v] : efpss.rbegin()->first)
+        val += getSolution(y.at(std::make_pair(u, v)));
+      std::cout << " = " << val << std::endl;
     }
     return efpss;
   }
