@@ -515,7 +515,7 @@ private:
             .distance_compare(std::less<double>())
             .distance_combine(std::plus<double>())
             .distance_zero(0.0)
-            .distance_infinity(std::numeric_limits<double>::infinity()));
+            .distance_inf(std::numeric_limits<double>::infinity()));
 
     std::cout << "distances and parents:" << std::endl;
     auto [vi, vend] = vertices(digraph);
