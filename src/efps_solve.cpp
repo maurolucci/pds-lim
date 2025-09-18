@@ -584,18 +584,20 @@ private:
       if (!ok)
         continue;
       // Map cycle to EFPS
-      efpss.emplace(std::make_pair(get_efps(cycle), cycle.size()));
+      auto ret = efpss.emplace(std::make_pair(get_efps(cycle), cycle.size()));
 
-      // PRint value and size of last efpss
-      std::cout << "Found EFPS of size " << cycle.size() << " with value ";
-      double val = 0.0;
-      for (auto [u, v] : efpss.rbegin()->first)
-        val += getNodeRel(y.at(std::make_pair(u, v)));
-      std::cout << " = " << val << " ";
-      std::cout << "with elements ";
-      for (auto [u, v] : efpss.rbegin()->first)
-        std::cout << "(" << u << "," << v << ") ";
-      std::cout << std::endl;
+      if (ret.second) {
+        // PRint value and size of last efpss
+        std::cout << "Found EFPS of size " << cycle.size() << " with value ";
+        double val = 0.0;
+        for (auto [u, v] : efpss.rbegin()->first)
+          val += getNodeRel(y.at(std::make_pair(u, v)));
+        std::cout << " = " << val << " ";
+        std::cout << "with elements ";
+        for (auto [u, v] : efpss.rbegin()->first)
+          std::cout << "(" << u << "," << v << ") ";
+        std::cout << std::endl;
+      }
     }
     return efpss;
   }
