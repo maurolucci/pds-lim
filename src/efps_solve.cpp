@@ -563,6 +563,14 @@ private:
     std::reverse(path.begin(), path.end());
     // Rotate the cycle so the minium element is in the front
     boost::range::rotate(path, boost::range::min_element(path));
+
+    // print the cycle
+    std::cout << "Cycle found: ";
+    for (auto vert : path)
+      std::cout << vert << " ";
+    std::cout << " with weight " << distances[u] + boost::get(weight_map, e)
+              << std::endl;
+
     return std::make_tuple(path, distances[u] + boost::get(weight_map, e),
                            true);
   }
