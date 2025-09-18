@@ -488,6 +488,13 @@ private:
     for (auto it = cycle.rbegin(); it != cycle.rend();) {
       Vertex v = *it++;
       int u = it != cycle.rend() ? *it : cycle.back();
+
+      if (!prec2props.contains(std::make_pair(v, u))) {
+        std::cerr << "Error: precedence (" << v << "," << u
+                  << ") has no associated propagations" << std::endl;
+        continue;
+      }
+
       for (auto &e : prec2props.at(std::make_pair(v, u)))
         efps.push_back(e);
     }
