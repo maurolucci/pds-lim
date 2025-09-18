@@ -199,9 +199,9 @@ int main(int argc, const char **argv) {
   if (useCuts) {
     solver.append("-cuts");
     if (cutMax < std::numeric_limits<size_t>::max())
-      solver.append(fmt::format("-m{}", cutMax));
+      solver.append(fmt::format("{}m", cutMax));
     if (cutNodes < std::numeric_limits<size_t>::max())
-      solver.append(fmt::format("-n{}", cutNodes));
+      solver.append(fmt::format("{}n", cutNodes));
   }
 
   // Read inputs
