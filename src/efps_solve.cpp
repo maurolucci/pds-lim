@@ -494,11 +494,7 @@ private:
         efps.push_back(e);
     }
     // Sort the EFPS to avoid duplicates
-    std::sort(efps.begin(), efps.end(), [](const Edge &a, const Edge &b) {
-      if (a.first != b.first)
-        return a.first < b.first;
-      return a.second < b.second;
-    });
+    efps.sort();
     return efps;
   }
 
