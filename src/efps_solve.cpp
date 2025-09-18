@@ -591,7 +591,11 @@ private:
       double val = 0.0;
       for (auto [u, v] : efpss.rbegin()->first)
         val += getNodeRel(y.at(std::make_pair(u, v)));
-      std::cout << " = " << val << std::endl;
+      std::cout << " = " << val << " ";
+      std::cout << "with elements ";
+      for (auto [u, v] : efpss.rbegin()->first)
+        std::cout << "(" << u << "," << v << ") ";
+      std::cout << std::endl;
     }
     return efpss;
   }
