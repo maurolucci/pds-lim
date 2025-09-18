@@ -511,7 +511,8 @@ private:
                                 .predecessor_map(&predecessors[0])
                                 .weight_map(weight_map));
 
-    std::cout << "distances and parents:" << std::endl;
+    std::cout << "distances and parents of " << digraph[v].label << " :"
+              << std::endl;
     auto [vi, vend] = vertices(digraph);
     for (; vi != vend; ++vi) {
       std::cout << "distance(" << digraph[*vi].label << ") = " << distances[*vi]
