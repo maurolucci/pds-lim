@@ -147,8 +147,7 @@ struct LazyEfpsCB : public GRBCallback {
     // MIP solution callback
     // Integer solution founded (it does not necessarily improve the
     // incumbent)
-    case GRB_CB_MIPSOL:
-
+    case GRB_CB_MIPSOL: {
       auto t0 = std::chrono::high_resolution_clock::now();
       totalCallback++;
 
@@ -192,10 +191,9 @@ struct LazyEfpsCB : public GRBCallback {
               .count();
 
       break;
-
+    }
     // Node callback
-    case GRB_CB_MIPNODE:
-
+    case GRB_CB_MIPNODE: {
       if (getIntInfo(GRB_CB_MIPNODE_STATUS) == GRB_OPTIMAL) {
         // Build weighted precedence digraph
         WeightedPrecedenceDigraph digraph = build_weighted_precedence_digraph();
@@ -204,6 +202,7 @@ struct LazyEfpsCB : public GRBCallback {
       }
 
       break;
+    }
     }
   }
 
