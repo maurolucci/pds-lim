@@ -567,8 +567,7 @@ private:
     for (auto x = u; x != v; x = predecessors[x])
       path.push_back(digraph[x].label);
     path.push_back(digraph[v].label);
-    std::reverse(path.begin(), path.end());
-    // Rotate the cycle so the minium element is in the front
+    // Rotate the cycle so the minimum element is in the front
     boost::range::rotate(path, boost::range::min_element(path));
 
     // print the cycle
