@@ -554,6 +554,7 @@ private:
                 << cycle.size() << ": ";
       for (auto v : cycle)
         std::cout << v << " ";
+      std::cout << std::endl;
     }
     return efpss;
   }
