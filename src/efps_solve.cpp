@@ -213,6 +213,8 @@ struct LazyEfpsCB : public GRBCallback {
         WeightedPrecedenceDigraph digraph = build_weighted_precedence_digraph();
         // Find violated cycles
         std::set<std::pair<EdgeList, size_t>> efpss = find_efps_cuts(digraph);
+        if (efpss.size() == 0)
+          break;
         std::pair<double, double> avg = addCutEfpss(efpss);
         totalCutAdded += efpss.size();
 
@@ -246,11 +248,15 @@ private:
       for (auto u :
            boost::make_iterator_range(boost::adjacent_vertices(v, graph))) {
         prec2props[std::make_pair(v, u)].push_back(std::make_pair(v, u));
+        std::cout << "Propagation (" << v << "," << u
+                  << ") imposes precedence (" << v << "," << u << ")\n";
         for (auto w :
              boost::make_iterator_range(boost::adjacent_vertices(v, graph))) {
           if (w == u)
             continue;
           prec2props[std::make_pair(w, u)].push_back(std::make_pair(v, u));
+          std::cout << "Propagation (" << v << "," << u
+                    << ") imposes precedence (" << w << "," << u << ")\n";
         }
       }
     }
@@ -488,13 +494,6 @@ private:
     for (auto it = cycle.rbegin(); it != cycle.rend();) {
       Vertex v = *it++;
       int u = it != cycle.rend() ? *it : cycle.back();
-
-      if (!prec2props.contains(std::make_pair(v, u))) {
-        std::cerr << "Error: precedence (" << v << "," << u
-                  << ") has no associated propagations" << std::endl;
-        continue;
-      }
-
       for (auto &e : prec2props.at(std::make_pair(v, u)))
         efps.push_back(e);
     }
