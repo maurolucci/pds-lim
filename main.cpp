@@ -240,9 +240,9 @@ int main(int argc, const char **argv) {
       std::string solverName = vm["solver"].as<std::string>();
       try {
         if (solverName == "efpss") {
-          result =
-              solveLazyEfpss(input, logPath, output.cbFile, output.solFile,
-                             timeout, inProp, outProp, initEFPS, lazyLimit);
+          result = solveLazyEfpss(input, logPath, output.cbFile, output.solFile,
+                                  timeout, inProp, outProp, initEFPS, lazyLimit,
+                                  cutLimit);
         } else if (solverName == "fpss") {
           result = solveLazyFpss(input, logPath, output.cbFile, output.solFile,
                                  timeout, inProp, outProp, initFPS1, initFPS2,
