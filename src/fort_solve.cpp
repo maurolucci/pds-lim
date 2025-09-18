@@ -26,26 +26,18 @@ struct LazyFortCB : public GRBCallback {
   size_t n_channels;
   size_t lazyLimit;
 
-  size_t &totalCallback;
-  size_t &totalCallbackTime;
-  size_t &totalLazy;
+  size_t &totalLazyCBCalls;
+  size_t &totalLazyCBTime;
+  size_t &totalLazyAdded;
 
   LazyFortCB(Pds &input, std::ostream &callbackFile, std::ostream &solutionFile,
              size_t lzLimit)
-      : mipmodel(),
-        model(*mipmodel.model),
-        s(mipmodel.s),
-        w(mipmodel.w),
-        y(),
-        input(input),
-        graph(input.get_graph()),
-        cbFile(callbackFile),
-        solFile(solutionFile),
-        n_channels(input.get_n_channels()),
-        lazyLimit(lzLimit),
-        totalCallback(mipmodel.totalCallback),
-        totalCallbackTime(mipmodel.totalCallbackTime),
-        totalLazy(mipmodel.totalLazy) {
+      : mipmodel(), model(*mipmodel.model), s(mipmodel.s), w(mipmodel.w), y(),
+        input(input), graph(input.get_graph()), cbFile(callbackFile),
+        solFile(solutionFile), n_channels(input.get_n_channels()),
+        lazyLimit(lzLimit), totalLazyCBCalls(mipmodel.totalLazyCBCalls),
+        totalLazyCBTime(mipmodel.totalLazyCBTime),
+        totalLazyAdded(mipmodel.totalLazyAdded) {
     model.setCallback(this);
 
     // Add variables
@@ -82,58 +74,57 @@ struct LazyFortCB : public GRBCallback {
 
   void callback() override {
     switch (where) {
-      // MIP solution callback
-      // Integer solution founded (it does not necessarily improve the
-      // incumbent)
-      case GRB_CB_MIPSOL:
+    // MIP solution callback
+    // Integer solution founded (it does not necessarily improve the
+    // incumbent)
+    case GRB_CB_MIPSOL:
 
-        auto t0 = std::chrono::high_resolution_clock::now();
-        totalCallback++;
+      auto t0 = std::chrono::high_resolution_clock::now();
+      totalLazyCBCalls++;
 
-        // Update solution
+      // Update solution
 
-        for (auto v : boost::make_iterator_range(vertices(graph))) {
-          if (getSolution(s.at(v)) < 0.5)
-            input.deactivate(v);
-          else {
-            std::vector<bool> dominate(degree(v, graph), false);
-            size_t i = 0;
-            for (auto u :
-                 boost::make_iterator_range(adjacent_vertices(v, graph))) {
-              if (degree(v, graph) <= input.get_n_channels() ||
-                  getSolution(w.at(std::make_pair(v, u))) > 0.5)
-                dominate[i] = true;
-              ++i;
-            }
-            input.activate(v, dominate);
+      for (auto v : boost::make_iterator_range(vertices(graph))) {
+        if (getSolution(s.at(v)) < 0.5)
+          input.deactivate(v);
+        else {
+          std::vector<bool> dominate(degree(v, graph), false);
+          size_t i = 0;
+          for (auto u :
+               boost::make_iterator_range(adjacent_vertices(v, graph))) {
+            if (degree(v, graph) <= input.get_n_channels() ||
+                getSolution(w.at(std::make_pair(v, u))) > 0.5)
+              dominate[i] = true;
+            ++i;
           }
+          input.activate(v, dominate);
         }
+      }
 
-        // Feasibility check
-        if (!input.isFeasible()) {
-          // Find violated forts
-          std::set<Fort> forts = violatedForts(lazyLimit);
-          std::pair<double, double> avg = addLazyForts(forts);
-          totalLazy += forts.size();
+      // Feasibility check
+      if (!input.isFeasible()) {
+        // Find violated forts
+        std::set<Fort> forts = violatedForts(lazyLimit);
+        std::pair<double, double> avg = addLazyForts(forts);
+        totalLazyAdded += forts.size();
 
-          // Report to callback file
-          cbFile << fmt::format(
-                        "# forts: {}, avg. vertex size: {:.2f}, avg. "
-                        "edge size: {:.2f}",
-                        forts.size(), avg.first, avg.second)
-                 << std::endl;
-        }
+        // Report to callback file
+        cbFile << fmt::format("# forts: {}, avg. vertex size: {:.2f}, avg. "
+                              "edge size: {:.2f}",
+                              forts.size(), avg.first, avg.second)
+               << std::endl;
+      }
 
-        auto t1 = std::chrono::high_resolution_clock::now();
-        totalCallbackTime +=
-            std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0)
-                .count();
+      auto t1 = std::chrono::high_resolution_clock::now();
+      totalLazyCBTime +=
+          std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0)
+              .count();
 
-        break;
+      break;
     }
   }
 
- private:
+private:
   std::set<Fort> violatedForts(size_t fortsLimit) {
     std::set<Fort> forts;
 
@@ -170,7 +161,8 @@ struct LazyFortCB : public GRBCallback {
 
     // Deactivate some blank vertices
     for (Vertex v : blank) {
-      if (forts.size() >= fortsLimit) break;
+      if (forts.size() >= fortsLimit)
+        break;
 
       // Deactivate v
       input.deactivate(v);
@@ -195,10 +187,12 @@ struct LazyFortCB : public GRBCallback {
   Fort findFort(Pds &input) {
     Fort fort;
     for (auto u : boost::make_iterator_range(vertices(graph))) {
-      if (input.isMonitored(u)) continue;
+      if (input.isMonitored(u))
+        continue;
       std::get<0>(fort).insert(u);
       for (auto z : boost::make_iterator_range(adjacent_vertices(u, graph))) {
-        if (!input.isMonitored(z)) continue;
+        if (!input.isMonitored(z))
+          continue;
         if (degree(z, graph) <= input.get_n_channels())
           std::get<1>(fort).insert(z);
         else
@@ -233,7 +227,7 @@ struct LazyFortCB : public GRBCallback {
                           static_cast<double>(accumEdges) / forts.size());
   }
 };
-}  // namespace
+} // namespace
 
 SolveResult solveLazyForts(Pds &input, boost::optional<std::string> logPath,
                            std::ostream &callbackFile, std::ostream &solFile,
@@ -242,4 +236,4 @@ SolveResult solveLazyForts(Pds &input, boost::optional<std::string> logPath,
   return lazyForts.solve(logPath, timeLimit);
 }
 
-}  // end of namespace pds
+} // end of namespace pds
