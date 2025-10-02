@@ -598,6 +598,8 @@ private:
         continue;
       // Find minimum weight cycles containing v
       VertexList cycle = find_min_weight_cycles_at_vertex(digraph, v);
+      if (cycle.size() == 0)
+        continue;
       cycles.insert(cycle);
       // Mark the vertices in the cycle as visited
       for (auto u : cycle)
