@@ -540,12 +540,11 @@ private:
                           static_cast<double>(accumExt) / efpss.size());
   }
 
-  // Find minimum weighted cycles containing a given vertex v, at most one for
-  // each incoming neighbor of v, such that the weight of the cycle is less
-  // than 1.
-  void find_min_weight_cycles_at_vertex(WeightedPrecedenceDigraph &digraph,
-                                        WeightedNode v,
-                                        std::set<VertexList> &cycles) {
+  // Find the minimum weighted cycle containing a given vertex v, such that the
+  // weight of the cycle is less than 1.
+  VertexList
+  find_min_weight_cycles_at_vertex(WeightedPrecedenceDigraph &digraph,
+                                   WeightedNode v) {
     // Find shortest paths from v to all other vertices
     std::vector<double> distances(num_vertices(digraph));
     std::vector<WeightedNode> predecessors(num_vertices(digraph));
@@ -554,29 +553,33 @@ private:
                             boost::distance_map(&distances[0])
                                 .predecessor_map(&predecessors[0])
                                 .weight_map(weight_map));
+    VertexList cycle;
+    double min_weight = std::numeric_limits<double>::max();
     // Iterate through incoming edges of v
     for (auto e : boost::make_iterator_range(in_edges(v, digraph))) {
-      // If the maximum number of cycles has been found, return
-      if (cycles.size() >= cutMax)
-        return;
       // Find the source of the edge
       auto u = source(e, digraph);
       // If there is not path from v to u, continue
       if (distances[u] == std::numeric_limits<double>::max())
         continue;
       // If the weight of the cycle is greater or equal than 1, continue
-      if (distances[u] + boost::get(weight_map, e) >= 1.0 - EPSILON)
+      double weight = distances[u] + boost::get(weight_map, e);
+      if (weight >= 1.0 - EPSILON)
         continue;
-      // Reconstruct the shortest path from v to u
-      VertexList path;
+      // If the weight of the cycle is greater or equal than the minimum found,
+      // continue
+      if (weight >= min_weight)
+        continue;
+      min_weight = weight;
+      // Reconstruct the cycle
+      cycle.clear();
       for (auto x = u; x != v; x = predecessors[x])
-        path.push_back(digraph[x].label);
-      path.push_back(digraph[v].label);
+        cycle.push_back(digraph[x].label);
+      cycle.push_back(digraph[v].label);
       // Rotate the cycle so the minimum element is in the front
-      boost::range::rotate(path, boost::range::min_element(path));
-      cycles.insert(path);
+      boost::range::rotate(cycle, boost::range::min_element(cycle));
     }
-    return;
+    return cycle;
   }
 
   // Function that finds a set of EFPS constraints to be used as cuts.
@@ -584,13 +587,21 @@ private:
   std::set<std::pair<EdgeList, size_t>>
   find_efps_cuts(WeightedPrecedenceDigraph &digraph) {
     std::set<VertexList> cycles;
-    // Iterate through the vertices
+    std::vector<bool> visited(num_vertices(digraph), false);
+    // Iterate through the unvisited vertices
     for (auto v : boost::make_iterator_range(vertices(digraph))) {
       // Check if the maximum number of FPSs has been found
       if (cycles.size() >= cutMax)
         break;
+      // Check if v has already been visited
+      if (visited[v])
+        continue;
       // Find minimum weight cycles containing v
-      find_min_weight_cycles_at_vertex(digraph, v, cycles);
+      VertexList cycle = find_min_weight_cycles_at_vertex(digraph, v);
+      cycles.insert(cycle);
+      // Mark the vertices in the cycle as visited
+      for (auto u : cycle)
+        visited[u] = true;
     }
     // Transform the cycles found into EFPS
     std::set<std::pair<EdgeList, size_t>> efpss;
