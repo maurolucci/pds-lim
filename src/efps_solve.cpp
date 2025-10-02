@@ -583,20 +583,20 @@ private:
   // The size of the cycle is saved in the 2nd components.
   std::set<std::pair<EdgeList, size_t>>
   find_efps_cuts(WeightedPrecedenceDigraph &digraph) {
-    std::set<std::pair<EdgeList, size_t>> efpss;
+    std::set<VertexList> cycles;
     // Iterate through the vertices
     for (auto v : boost::make_iterator_range(vertices(digraph))) {
       // Check if the maximum number of FPSs has been found
-      if (efpss.size() >= cutMax)
+      if (cycles.size() >= cutMax)
         break;
       // Find minimum weight cycles containing v
-      std::set<VertexList> cycles;
       find_min_weight_cycles_at_vertex(digraph, v, cycles);
-      // Add the cycles found
-      for (auto &cycle : cycles) {
-        // Map cycle to EFPS
-        efpss.emplace(std::make_pair(get_efps(cycle), cycle.size()));
-      }
+    }
+    // Transform the cycles found into EFPS
+    std::set<std::pair<EdgeList, size_t>> efpss;
+    for (auto &cycle : cycles) {
+      // Map cycle to EFPS
+      efpss.emplace(std::make_pair(get_efps(cycle), cycle.size()));
     }
     return efpss;
   }
