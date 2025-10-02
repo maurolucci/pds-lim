@@ -587,14 +587,14 @@ private:
   std::set<std::pair<EdgeList, size_t>>
   find_efps_cuts(WeightedPrecedenceDigraph &digraph) {
     std::set<VertexList> cycles;
-    std::vector<bool> visited(num_vertices(digraph), false);
+    std::vector<bool> visited(num_vertices(graph), false);
     // Iterate through the unvisited vertices
     for (auto v : boost::make_iterator_range(vertices(digraph))) {
       // Check if the maximum number of FPSs has been found
       if (cycles.size() >= cutMax)
         break;
       // Check if v has already been visited
-      if (visited[v])
+      if (visited[digraph[v].label])
         continue;
       // Find minimum weight cycles containing v
       VertexList cycle = find_min_weight_cycles_at_vertex(digraph, v);
