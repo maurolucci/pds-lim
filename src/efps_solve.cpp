@@ -25,7 +25,7 @@ struct LazyEfpsCB : public GRBCallback {
   size_t lazyMax;
   bool useCuts;
   size_t cutMax;
-  size_t cutNodes;
+  size_t cutFreq;
 
   size_t &totalLazyCBCalls;
   size_t &totalLazyCBTime;
@@ -37,11 +37,11 @@ struct LazyEfpsCB : public GRBCallback {
 
   LazyEfpsCB(Pds &input, std::ostream &callbackFile, std::ostream &solutionFile,
              bool inProp, bool outProp, bool initEFPS, size_t lazyMax,
-             bool useCuts, size_t cutMax, size_t cutNodes)
+             bool useCuts, size_t cutMax, size_t cutFreq)
       : mipmodel(), model(*mipmodel.model), s(mipmodel.s), w(mipmodel.w), y(),
         input(input), graph(input.get_graph()), cbFile(callbackFile),
         solFile(solutionFile), lazyMax(lazyMax), useCuts(useCuts),
-        cutMax(cutMax), cutNodes(cutNodes),
+        cutMax(cutMax), cutFreq(cutFreq),
         totalLazyCBCalls(mipmodel.totalLazyCBCalls),
         totalLazyCBTime(mipmodel.totalLazyCBTime),
         totalLazyAdded(mipmodel.totalLazyAdded),
@@ -209,7 +209,9 @@ struct LazyEfpsCB : public GRBCallback {
     }
     // Node callback
     case GRB_CB_MIPNODE: {
-      if (!useCuts || getDoubleInfo(GRB_CB_MIPNODE_NODCNT) >= cutNodes)
+      if (!useCuts ||
+          static_cast<size_t>(getDoubleInfo(GRB_CB_MIPNODE_NODCNT)) % cutFreq !=
+              0)
         break;
       if (getIntInfo(GRB_CB_MIPNODE_STATUS) == GRB_OPTIMAL) {
 
@@ -492,7 +494,7 @@ private:
   }
 
   // Function thats maps a cycle to an EFPS
-  EdgeList get_efps(VertexList &cycle) {
+  EdgeList get_efps(const VertexList &cycle) {
     EdgeList efps;
     for (auto it = cycle.rbegin(); it != cycle.rend();) {
       Vertex v = *it++;
@@ -538,15 +540,13 @@ private:
                           static_cast<double>(accumExt) / efpss.size());
   }
 
-  // Find the minimum weight cycle that contains the edge e
-  // Returns a tuple with the cycle, its weight, and a boolean that is true
-  // if a cycle has been found, false otherwise
-  std::tuple<VertexList, double, bool>
-  find_min_weight_cycle(WeightedPrecedenceDigraph &digraph, WeightedArc e) {
-
-    // Find the shortest path from v to u
-    auto v = target(e, digraph);
-    auto u = source(e, digraph);
+  // Find minimum weighted cycles containing a given vertex v, at most one for
+  // each incoming neighbor of v, such that the weight of the cycle is less
+  // than 1.
+  void find_min_weight_cycles_at_vertex(WeightedPrecedenceDigraph &digraph,
+                                        WeightedNode v,
+                                        std::set<VertexList> &cycles) {
+    // Find shortest paths from v to all other vertices
     std::vector<double> distances(num_vertices(digraph));
     std::vector<WeightedNode> predecessors(num_vertices(digraph));
     auto weight_map = boost::get(boost::edge_weight, digraph);
@@ -554,25 +554,29 @@ private:
                             boost::distance_map(&distances[0])
                                 .predecessor_map(&predecessors[0])
                                 .weight_map(weight_map));
-
-    // If there is not path from v to u, return false
-    if (distances[u] == std::numeric_limits<double>::max())
-      return std::make_tuple(VertexList(), 0.0, false);
-
-    // If the weight of the cycle is greater or equal than 1, return false
-    if (distances[u] + boost::get(weight_map, e) >= 1.0 - EPSILON)
-      return std::make_tuple(VertexList(), 0.0, false);
-
-    // Reconstruct the shortest path from v to u
-    VertexList path;
-    for (auto x = u; x != v; x = predecessors[x])
-      path.push_back(digraph[x].label);
-    path.push_back(digraph[v].label);
-    // Rotate the cycle so the minimum element is in the front
-    boost::range::rotate(path, boost::range::min_element(path));
-
-    return std::make_tuple(path, distances[u] + boost::get(weight_map, e),
-                           true);
+    // Iterate through incoming edges of v
+    for (auto e : boost::make_iterator_range(in_edges(v, digraph))) {
+      // If the maximum number of cycles has been found, return
+      if (cycles.size() >= cutMax)
+        return;
+      // Find the source of the edge
+      auto u = source(e, digraph);
+      // If there is not path from v to u, continue
+      if (distances[u] == std::numeric_limits<double>::max())
+        continue;
+      // If the weight of the cycle is greater or equal than 1, continue
+      if (distances[u] + boost::get(weight_map, e) >= 1.0 - EPSILON)
+        continue;
+      // Reconstruct the shortest path from v to u
+      VertexList path;
+      for (auto x = u; x != v; x = predecessors[x])
+        path.push_back(digraph[x].label);
+      path.push_back(digraph[v].label);
+      // Rotate the cycle so the minimum element is in the front
+      boost::range::rotate(path, boost::range::min_element(path));
+      cycles.insert(path);
+    }
+    return;
   }
 
   // Function that finds a set of EFPS constraints to be used as cuts.
@@ -580,17 +584,19 @@ private:
   std::set<std::pair<EdgeList, size_t>>
   find_efps_cuts(WeightedPrecedenceDigraph &digraph) {
     std::set<std::pair<EdgeList, size_t>> efpss;
-    // Iterate through edges
-    for (auto e : boost::make_iterator_range(edges(digraph))) {
+    // Iterate through the vertices
+    for (auto v : boost::make_iterator_range(vertices(digraph))) {
       // Check if the maximum number of FPSs has been found
       if (efpss.size() >= cutMax)
         break;
-      // Find minimum weight cycle containing e
-      auto [cycle, weight, ok] = find_min_weight_cycle(digraph, e);
-      if (!ok)
-        continue;
-      // Map cycle to EFPS
-      efpss.emplace(std::make_pair(get_efps(cycle), cycle.size()));
+      // Find minimum weight cycles containing v
+      std::set<VertexList> cycles;
+      find_min_weight_cycles_at_vertex(digraph, v, cycles);
+      // Add the cycles found
+      for (auto &cycle : cycles) {
+        // Map cycle to EFPS
+        efpss.emplace(std::make_pair(get_efps(cycle), cycle.size()));
+      }
     }
     return efpss;
   }
@@ -620,9 +626,9 @@ SolveResult solveLazyEfpss(Pds &input, boost::optional<std::string> logPath,
                            std::ostream &callbackFile, std::ostream &solFile,
                            double timeLimit, bool inProp, bool outProp,
                            bool initEFPS, size_t lazyMax, bool useCuts,
-                           size_t cutMax, size_t cutNodes) {
+                           size_t cutMax, size_t cutFreq) {
   LazyEfpsCB lazyEfpss(input, callbackFile, solFile, inProp, outProp, initEFPS,
-                       lazyMax, useCuts, cutMax, cutNodes);
+                       lazyMax, useCuts, cutMax, cutFreq);
   return lazyEfpss.solve(logPath, timeLimit);
 }
 

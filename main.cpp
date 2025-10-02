@@ -122,10 +122,8 @@ int main(int argc, const char **argv) {
       "cut-max",
       po::value<size_t>()->default_value(std::numeric_limits<size_t>::max()),
       "maximum number of cut constraints added per callback");
-  desc.add_options()(
-      "cut-nodes",
-      po::value<size_t>()->default_value(std::numeric_limits<size_t>::max()),
-      "maximum number of nodes for using cut callback");
+  desc.add_options()("cut-freq", po::value<size_t>()->default_value(1),
+                     "frequency of cut separation (in nodes)");
   po::positional_options_description pos;
   pos.add("graph", -1);
   po::variables_map vm;
@@ -160,7 +158,7 @@ int main(int argc, const char **argv) {
   bool useCuts = vm.count("cuts");
   size_t lazyMax = vm["lazy-max"].as<size_t>();
   size_t cutMax = vm["cut-max"].as<size_t>();
-  size_t cutNodes = vm["cut-nodes"].as<size_t>();
+  size_t cutFreq = vm["cut-freq"].as<size_t>();
   std::vector<std::string> inputs;
   if (vm.count("graph")) {
     inputs = vm["graph"].as<std::vector<std::string>>();
@@ -200,8 +198,8 @@ int main(int argc, const char **argv) {
     solver.append("-cuts");
     if (cutMax < std::numeric_limits<size_t>::max())
       solver.append(fmt::format("{}m", cutMax));
-    if (cutNodes < std::numeric_limits<size_t>::max())
-      solver.append(fmt::format("{}n", cutNodes));
+    if (cutFreq)
+      solver.append(fmt::format("{}f", cutFreq));
   }
 
   // Read inputs
@@ -256,7 +254,7 @@ int main(int argc, const char **argv) {
         if (solverName == "efpss") {
           result = solveLazyEfpss(input, logPath, output.cbFile, output.solFile,
                                   timeout, inProp, outProp, initEFPS, lazyMax,
-                                  useCuts, cutMax, cutNodes);
+                                  useCuts, cutMax, cutFreq);
         } else if (solverName == "fpss") {
           result = solveLazyFpss(input, logPath, output.cbFile, output.solFile,
                                  timeout, inProp, outProp, initFPS1, initFPS2,
