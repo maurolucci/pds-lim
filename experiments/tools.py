@@ -300,8 +300,8 @@ def show_gap_1(data, solvers, grid: bool = False):
 
 def show_performance_profile(data, solvers, log_scale: bool = False):
     data = data[data.solver.isin(solvers)]
-    data2 = data[["instance", "solver", "time_all"]].pivot_table(
-        index="instance", columns="solver", values="time_all"
+    data2 = data[["instance", "k", "solver", "time_all"]].pivot_table(
+        index=["instance", "k"], columns="solver", values="time_all"
     )
     palette = ["o-C0", "x--C1", "s-.C2", "+:C3", "o-C4", "o--C5", "o-.C6"]
     pp.perfprof(data2, palette, markersize=4, markevery=[0])
