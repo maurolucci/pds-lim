@@ -172,8 +172,8 @@ def show_execution_time(data, solvers, grid: bool = False, log_scale: bool = Fal
             x="instance",
             y="t_solver",
             hue="solver",
-            markers=["o", "x", "s", "+"],
-            linestyles=["-", "--", "-.", ":"],
+            markers=["o", "x", "s", "+", "o", "x", "s", "+", "o", "x"],
+            linestyles=["-", "--", "-.", ":", "-", "--", "-.", ":", "-", "--"],
             errorbar=None,
             linewidth=1.5,
         )
@@ -303,7 +303,18 @@ def show_performance_profile(data, solvers, log_scale: bool = False):
     data2 = data[["instance", "k", "solver", "time_all"]].pivot_table(
         index=["instance", "k"], columns="solver", values="time_all"
     )
-    palette = ["o-C0", "x--C1", "s-.C2", "+:C3", "o-C4", "o--C5", "o-.C6"]
+    palette = [
+        "o-C0",
+        "x--C1",
+        "s-.C2",
+        "+:C3",
+        "o-C4",
+        "o-C5",
+        "x--C6",
+        "s-.C7",
+        "+:C8",
+        "o-C9",
+    ]
     pp.perfprof(data2, palette, markersize=4, markevery=[0])
     plt.legend(data2.columns)
     if log_scale:
